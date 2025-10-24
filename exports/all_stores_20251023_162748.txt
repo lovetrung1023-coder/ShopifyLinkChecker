@@ -1,0 +1,26 @@
+SHOPIFY STORE MONITORING REPORT
+==================================================
+Generated: 2025-10-23 16:27:48
+
+SUMMARY:
+Total Stores: 15
+DEAD: 15 (100.0%)
+
+
+DEAD STORES (15):
+------------------------------
+https://alfredrocha.myshopify.com/ (Last check: 2025-10-23T16:27:18) (Dead since: 2025-10-23)
+https://aliceau.myshopify.com/ (Last check: 2025-10-23T16:27:19) (Dead since: 2025-10-23)
+https://alyssacabrera.myshopify.com/ (Last check: 2025-10-23T16:27:20) (Dead since: 2025-10-23)
+https://amandapham.myshopify.com/ (Last check: 2025-10-23T16:27:22) (Dead since: 2025-10-23)
+https://amberfrechette.myshopify.com/ (Last check: 2025-10-23T16:27:23) (Dead since: 2025-10-23)
+https://andrealomeli.myshopify.com/ (Last check: 2025-10-23T16:27:24) (Dead since: 2025-10-23)
+https://anneherman.myshopify.com/ (Last check: 2025-10-23T16:27:26) (Dead since: 2025-10-23)
+https://arielgutierrez.myshopify.com/ (Last check: 2025-10-23T16:27:27) (Dead since: 2025-10-23)
+https://ashaminix.myshopify.com/ (Last check: 2025-10-23T16:27:28) (Dead since: 2025-10-23)
+https://aysaralshammarey.myshopify.com/ (Last check: 2025-10-23T16:27:30) (Dead since: 2025-10-23)
+https://beverlyfoulks.myshopify.com/ (Last check: 2025-10-23T16:27:31) (Dead since: 2025-10-23)
+https://bhupendrashah.myshopify.com/ (Last check: 2025-10-23T16:27:32) (Dead since: 2025-10-23)
+https://carmenworrell.myshopify.com/ (Last check: 2025-10-23T16:27:34) (Dead since: 2025-10-23)
+https://cassintaylor.myshopify.com/ (Last check: 2025-10-23T16:27:35) (Dead since: 2025-10-23)
+https://scottchilders.myshopify.com/ (Last check: 2025-10-23T16:27:36) (Dead since: 2025-10-23)
