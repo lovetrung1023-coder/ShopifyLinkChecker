@@ -347,15 +347,6 @@ def main():
         
         st.markdown("---")
         
-        # Current Pacific Time Display (Oregon)
-        pacific_tz = pytz.timezone('America/Los_Angeles')
-        from datetime import datetime as dt
-        utc_now = dt.utcnow().replace(tzinfo=pytz.UTC)
-        current_pacific_time = utc_now.astimezone(pacific_tz)
-        st.info(f"🕐 **US West Time (Oregon):** {current_pacific_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-        
-        st.markdown("---")
-        
         # US Timezone Status
         st.subheader("🕐 US Timezone Status" if lang == 'en' else "🕐 Trạng Thái Múi Giờ US")
         
