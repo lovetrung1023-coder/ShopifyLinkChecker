@@ -14,10 +14,15 @@ class TelegramNotifier:
         
         if not self.enabled:
             print("⚠️ Telegram notifications disabled: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set")
+            print(f"   Bot Token exists: {bool(self.bot_token)}")
+            print(f"   Chat ID exists: {bool(self.chat_id)}")
+        else:
+            print(f"✅ Telegram enabled - Chat ID: {self.chat_id[:5]}...")
     
     def send_message(self, message: str) -> bool:
         """Send a message to Telegram"""
         if not self.enabled:
+            print("❌ Telegram send_message: Not enabled")
             return False
         
         try:
@@ -28,16 +33,29 @@ class TelegramNotifier:
                 'parse_mode': 'HTML'
             }
             
+            print(f"📤 Sending Telegram message to {self.chat_id}...")
             response = requests.post(url, json=payload, timeout=10)
-            return response.status_code == 200
+            
+            if response.status_code == 200:
+                print("✅ Telegram message sent successfully")
+                return True
+            else:
+                print(f"❌ Telegram API error: {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
         except Exception as e:
-            print(f"Error sending Telegram message: {e}")
+            print(f"❌ Error sending Telegram message: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def notify_dead_stores(self, dead_stores: List[str]) -> bool:
         """Notify about newly dead stores"""
         if not dead_stores:
+            print("ℹ️ notify_dead_stores: No dead stores to notify")
             return True
+        
+        print(f"📢 notify_dead_stores: Preparing notification for {len(dead_stores)} dead stores")
         
         message = f"🔴 <b>New DEAD Stores Detected</b>\n\n"
         message += f"Found {len(dead_stores)} newly dead store(s):\n\n"
@@ -55,7 +73,10 @@ class TelegramNotifier:
     def notify_status_changes(self, changes: List[Dict[str, Any]]) -> bool:
         """Notify about status changes"""
         if not changes:
+            print("ℹ️ notify_status_changes: No changes to notify")
             return True
+        
+        print(f"📢 notify_status_changes: Preparing notification for {len(changes)} changes")
         
         message = f"🔄 <b>Store Status Changes</b>\n\n"
         

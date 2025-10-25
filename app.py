@@ -43,37 +43,69 @@ def convert_utc_to_pacific(utc_timestamp_str):
 
 
 def scheduled_check_callback():
-    """Callback function for scheduled checks"""
+    """Callback function for scheduled checks - runs in separate thread"""
     try:
+        print("\n" + "="*50)
+        print("🔄 SCHEDULED CHECK CALLBACK STARTED")
+        print("="*50)
+        
+        # Create standalone instances for thread (can't use st.session_state in threads)
+        print("📦 Creating instances...")
+        data_manager = DatabaseManager()
+        checker = ShopifyChecker()
+        telegram_notifier = TelegramNotifier()
+        
         # Get all stores
-        data = st.session_state.data_manager.get_data()
+        data = data_manager.get_data()
+        print(f"📊 Found {len(data)} stores to check")
 
         # Check each store
-        for url in data.keys():
-            status, timezone_checked = st.session_state.checker.check_store_status(url)
+        for i, url in enumerate(data.keys(), 1):
+            print(f"[{i}/{len(data)}] Checking: {url[:50]}...")
+            status, timezone_checked = checker.check_store_status(url)
 
             # If DEAD, do second check
             if status == "DEAD":
+                print(f"   ⚠️ DEAD detected, rechecking...")
                 time.sleep(1)
-                status, timezone_checked = st.session_state.checker.check_store_status(url)
+                status, timezone_checked = checker.check_store_status(url)
+                print(f"   Second check result: {status}")
 
-            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
+            data_manager.update_store_status(url, status, timezone_checked)
 
         # Check for newly dead stores in the last 5 minutes
-        newly_dead = st.session_state.data_manager.get_newly_dead_stores(
-            minutes=5)
+        print("\n🔍 Checking for newly dead stores (last 5 min)...")
+        newly_dead = data_manager.get_newly_dead_stores(minutes=5)
+        print(f"   Found {len(newly_dead)} newly dead stores")
 
         # Send Telegram notification if there are newly dead stores
         if newly_dead:
-            st.session_state.telegram_notifier.notify_dead_stores(newly_dead)
+            print(f"📢 Attempting to notify about {len(newly_dead)} dead stores...")
+            result = telegram_notifier.notify_dead_stores(newly_dead)
+            print(f"   Notification result: {result}")
+        else:
+            print("   No newly dead stores to notify")
 
         # Also check for other status changes
-        changes = st.session_state.data_manager.get_latest_changes(minutes=5)
+        print("\n🔍 Checking for status changes (last 5 min)...")
+        changes = data_manager.get_latest_changes(minutes=5)
+        print(f"   Found {len(changes)} status changes")
+        
         if changes:
-            st.session_state.telegram_notifier.notify_status_changes(changes)
+            print(f"📢 Attempting to notify about {len(changes)} changes...")
+            result = telegram_notifier.notify_status_changes(changes)
+            print(f"   Notification result: {result}")
+        else:
+            print("   No status changes to notify")
+        
+        print("\n" + "="*50)
+        print("✅ SCHEDULED CHECK CALLBACK COMPLETED")
+        print("="*50 + "\n")
 
     except Exception as e:
-        print(f"Error in scheduled check: {e}")
+        print(f"\n❌ ERROR in scheduled check: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # Initialize session state
