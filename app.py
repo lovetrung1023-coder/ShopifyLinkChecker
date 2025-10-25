@@ -20,6 +20,28 @@ st.set_page_config(page_title="Shopify Store Monitor",
                    initial_sidebar_state="expanded")
 
 
+def convert_utc_to_pacific(utc_timestamp_str):
+    """Convert UTC ISO timestamp string to Pacific timezone string"""
+    if not utc_timestamp_str or utc_timestamp_str in ['Never', '-', None]:
+        return utc_timestamp_str
+    
+    try:
+        pacific_tz = pytz.timezone('America/Los_Angeles')
+        
+        if isinstance(utc_timestamp_str, str):
+            utc_dt = datetime.fromisoformat(utc_timestamp_str.replace('Z', '+00:00'))
+        else:
+            utc_dt = utc_timestamp_str
+        
+        if utc_dt.tzinfo is None:
+            utc_dt = pytz.UTC.localize(utc_dt)
+        
+        pacific_dt = utc_dt.astimezone(pacific_tz)
+        return pacific_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+    except Exception as e:
+        return utc_timestamp_str
+
+
 def scheduled_check_callback():
     """Callback function for scheduled checks"""
     try:
@@ -900,8 +922,7 @@ def display_status_changes(changes):
     lang = st.session_state.language
     df_changes = pd.DataFrame(changes)
 
-    df_changes['changed_at'] = pd.to_datetime(
-        df_changes['changed_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+    df_changes['changed_at'] = df_changes['changed_at'].apply(convert_utc_to_pacific)
 
     df_changes = df_changes.rename(
         columns={
@@ -977,9 +998,9 @@ def display_data_table(status_filter, search_term):
             get_text('status', lang):
             data.get('status', 'UNCHECKED'),
             get_text('last_check', lang):
-            data.get('last_check', 'Never'),
+            convert_utc_to_pacific(data.get('last_check', 'Never')),
             get_text('first_dead_date', lang):
-            data.get('first_dead_date', '-'),
+            convert_utc_to_pacific(data.get('first_dead_date', '-')),
             get_text('check_count', lang):
             data.get('check_count', 0)
         })
