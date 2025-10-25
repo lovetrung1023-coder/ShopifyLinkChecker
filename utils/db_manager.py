@@ -52,6 +52,7 @@ class DatabaseManager:
                     last_check TIMESTAMP WITH TIME ZONE,
                     first_dead_date TIMESTAMP WITH TIME ZONE,
                     check_count INTEGER DEFAULT 0,
+                    timezone_checked VARCHAR(100),
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
                 )
@@ -135,7 +136,7 @@ class DatabaseManager:
         pacific_tz = self.get_timezone()
         return utc_now.astimezone(pacific_tz)
 
-    def update_store_status(self, url: str, status: str, response_time: float = None, status_code: int = None) -> None:
+    def update_store_status(self, url: str, status: str, timezone_checked: str = None, response_time: float = None, status_code: int = None) -> None:
         """Update store status with timestamp and history tracking"""
         conn = None
         cur = None
@@ -158,6 +159,7 @@ class DatabaseManager:
                     last_check = %s,
                     check_count = check_count + 1,
                     updated_at = %s,
+                    timezone_checked = %s,
                     first_check = COALESCE(first_check, %s),
                     first_dead_date = CASE
                         WHEN %s = 'DEAD' AND %s != 'DEAD' THEN %s
@@ -165,16 +167,16 @@ class DatabaseManager:
                         ELSE first_dead_date
                     END
                 WHERE url = %s
-            ''', (status, current_time, current_time, current_time,
+            ''', (status, current_time, current_time, timezone_checked, current_time,
                   status, previous_status, current_time,
                   status, previous_status, url))
 
             # If the store didn't exist, insert it
             if not result:
                 cur.execute('''
-                    INSERT INTO stores (url, status, first_check, last_check, check_count, first_dead_date)
-                    VALUES (%s, %s, %s, %s, 1, %s)
-                ''', (url, status, current_time, current_time,
+                    INSERT INTO stores (url, status, first_check, last_check, check_count, timezone_checked, first_dead_date)
+                    VALUES (%s, %s, %s, %s, 1, %s, %s)
+                ''', (url, status, current_time, current_time, timezone_checked,
                       current_time if status == 'DEAD' else None))
 
 
@@ -200,20 +202,21 @@ class DatabaseManager:
             cur = conn.cursor()
 
             cur.execute('''
-                SELECT url, status, first_check, last_check, first_dead_date, check_count
+                SELECT url, status, first_check, last_check, first_dead_date, check_count, timezone_checked
                 FROM stores
                 ORDER BY url
             ''')
 
             data = {}
             for row in cur.fetchall():
-                url, status, first_check, last_check, first_dead_date, check_count = row
+                url, status, first_check, last_check, first_dead_date, check_count, timezone_checked = row
                 data[url] = {
                     'status': status,
                     'first_check': first_check.isoformat() if first_check else None,
                     'last_check': last_check.isoformat() if last_check else None,
                     'first_dead_date': first_dead_date.isoformat() if first_dead_date else None,
-                    'check_count': check_count
+                    'check_count': check_count,
+                    'timezone_checked': timezone_checked
                 }
 
             return data
@@ -301,7 +304,7 @@ class DatabaseManager:
             cur = conn.cursor()
 
             query = '''
-                SELECT url, status, first_check, last_check, first_dead_date, check_count
+                SELECT url, status, first_check, last_check, first_dead_date, check_count, timezone_checked
                 FROM stores
                 WHERE status = ANY(%s)
             '''
@@ -317,13 +320,14 @@ class DatabaseManager:
 
             filtered = {}
             for row in cur.fetchall():
-                url, status, first_check, last_check, first_dead_date, check_count = row
+                url, status, first_check, last_check, first_dead_date, check_count, timezone_checked = row
                 filtered[url] = {
                     'status': status,
                     'first_check': first_check.isoformat() if first_check else None,
                     'last_check': last_check.isoformat() if last_check else None,
                     'first_dead_date': first_dead_date.isoformat() if first_dead_date else None,
-                    'check_count': check_count
+                    'check_count': check_count,
+                    'timezone_checked': timezone_checked
                 }
 
             return filtered
@@ -344,7 +348,7 @@ class DatabaseManager:
             if days:
                 # Filter by date range at database level
                 cur.execute('''
-                    SELECT 
+                    SELECT
                         DATE(checked_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Los_Angeles') as check_date,
                         status,
                         COUNT(*) as count
@@ -356,7 +360,7 @@ class DatabaseManager:
             else:
                 # Get all timeline data
                 cur.execute('''
-                    SELECT 
+                    SELECT
                         DATE(checked_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/Los_Angeles') as check_date,
                         status,
                         COUNT(*) as count
@@ -422,21 +426,22 @@ class DatabaseManager:
             cur = conn.cursor()
 
             cur.execute('''
-                SELECT url, status, first_check, last_check, first_dead_date, check_count
+                SELECT url, status, first_check, last_check, first_dead_date, check_count, timezone_checked
                 FROM stores
                 WHERE url = %s
             ''', (url,))
 
             result = cur.fetchone()
             if result:
-                url, status, first_check, last_check, first_dead_date, check_count = result
+                url, status, first_check, last_check, first_dead_date, check_count, timezone_checked = result
                 return {
                     'url': url,
                     'status': status,
                     'first_check': first_check.isoformat() if first_check else None,
                     'last_check': last_check.isoformat() if last_check else None,
                     'first_dead_date': first_dead_date.isoformat() if first_dead_date else None,
-                    'check_count': check_count
+                    'check_count': check_count,
+                    'timezone_checked': timezone_checked
                 }
             return None
         finally:
@@ -540,7 +545,7 @@ class DatabaseManager:
             # Ensure dates are handled with the correct timezone
             cur.execute('''
                 WITH all_history AS (
-                    SELECT 
+                    SELECT
                         s.url,
                         ch.status,
                         ch.checked_at,
@@ -551,7 +556,7 @@ class DatabaseManager:
                 changes_in_window AS (
                     SELECT url, prev_status, status, checked_at
                     FROM all_history
-                    WHERE prev_status IS NOT NULL 
+                    WHERE prev_status IS NOT NULL
                       AND prev_status != status
                       AND checked_at >= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/Los_Angeles') - INTERVAL '%s days'
                 )
@@ -587,7 +592,7 @@ class DatabaseManager:
             # Ensure dates are handled with the correct timezone
             cur.execute('''
                 WITH all_history AS (
-                    SELECT 
+                    SELECT
                         s.url,
                         ch.status,
                         ch.checked_at,
@@ -598,7 +603,7 @@ class DatabaseManager:
                 recent_changes AS (
                     SELECT url, prev_status, status, checked_at
                     FROM all_history
-                    WHERE prev_status IS NOT NULL 
+                    WHERE prev_status IS NOT NULL
                       AND prev_status != status
                       AND checked_at >= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'America/Los_Angeles') - INTERVAL '%s minutes'
                 )
