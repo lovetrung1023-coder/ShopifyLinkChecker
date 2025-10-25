@@ -12,8 +12,20 @@ class ShopifyChecker:
     
     def __init__(self):
         self.session = requests.Session()
+        # More realistic browser headers
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0'
         })
         self.timeout = 10
         self.retry_delay = 2
@@ -178,34 +190,54 @@ class ShopifyChecker:
         """
         Calculate delay multiplier based on a RANDOM US timezone.
         This simulates natural user behavior from different US regions.
+        
+        IMPORTANT: This is called for EVERY check to ensure randomness.
         """
         if not self.use_smart_delay:
+            self.last_checked_timezone = None
             return 1.0
         
         # Randomly pick one US timezone to simulate user from that region
         random_tz_name = random.choice(self.us_timezones)
+        self.last_checked_timezone = random_tz_name  # Store for later retrieval
+        
         tz = pytz.timezone(random_tz_name)
         from datetime import datetime as dt
         utc_now = dt.utcnow().replace(tzinfo=pytz.UTC)
         local_time = utc_now.astimezone(tz)
         hour = local_time.hour
         
+        # Debug log to verify randomization
+        print(f"🎲 Random TZ: {random_tz_name} | Local: {hour}:00 | ", end="")
+        
         # Determine delay based on this random timezone's local time
         if 9 <= hour <= 17:
             # Peak business hours in this timezone
-            return random.uniform(2.0, 2.5)
+            multiplier = random.uniform(2.0, 2.5)
+            print(f"Peak Hours → {multiplier:.2f}x delay")
+            return multiplier
         elif hour < 8 or hour > 22:
             # Off-peak hours (night/early morning)
+            print(f"Off-Peak → 1.0x delay")
             return 1.0
         else:
             # Normal hours
-            return random.uniform(1.3, 1.7)
+            multiplier = random.uniform(1.3, 1.7)
+            print(f"Normal Hours → {multiplier:.2f}x delay")
+            return multiplier
+    
+    def _get_last_checked_timezone(self) -> str:
+        """Get the timezone that was used for the last check"""
+        return getattr(self, 'last_checked_timezone', None)
     
     def _random_delay(self):
         """
         Add smart random delay between requests to avoid detection.
         Randomly picks a US timezone and adjusts delay accordingly.
         This simulates natural traffic from different US regions.
+        
+        NOTE: This function is called BEFORE EVERY check, ensuring
+        each check randomly picks a new US timezone.
         """
         # Get base delay
         base_delay = random.uniform(self.min_delay, self.max_delay)
@@ -223,11 +255,16 @@ class ShopifyChecker:
         
         time.sleep(final_delay)
 
-    def check_store_status(self, url: str) -> str:
+    def check_store_status(self, url: str) -> tuple[str, str]:
         """
         Check the status of a Shopify store with proxy support (HTTP/HTTPS/SOCKS5)
-        Returns: LIVE, DEAD, UNPAID, or UNKNOWN
+        Returns: (status, timezone_checked) tuple
+        status: LIVE, DEAD, UNPAID, or UNKNOWN
+        timezone_checked: US timezone used for this check
         """
+        # Get the timezone that will be used for this check
+        checked_timezone = self._get_last_checked_timezone()
+        
         try:
             # Ensure URL has proper format
             if not url.startswith('http'):
@@ -257,7 +294,7 @@ class ShopifyChecker:
                 ]
                 
                 if any(indicator in html_content for indicator in unpaid_indicators):
-                    return "UNPAID"
+                    return ("UNPAID", checked_timezone)
                 
                 # Check if it's a valid Shopify store page
                 shopify_indicators = [
@@ -268,20 +305,20 @@ class ShopifyChecker:
                 ]
                 
                 if any(indicator in html_content for indicator in shopify_indicators):
-                    return "LIVE"
+                    return ("LIVE", checked_timezone)
                 else:
                     # Might be a redirect or different content
-                    return "LIVE"
+                    return ("LIVE", checked_timezone)
             
             elif status_code == 404:
-                return "DEAD"
+                return ("DEAD", checked_timezone)
             elif status_code == 403:
-                return "UNPAID"
+                return ("UNPAID", checked_timezone)
             elif status_code >= 500:
                 # Server error - might be temporary
-                return "UNKNOWN"
+                return ("UNKNOWN", checked_timezone)
             else:
-                return f"UNKNOWN ({status_code})"
+                return (f"UNKNOWN ({status_code})", checked_timezone)
                 
         except requests.exceptions.ProxyError as e:
             # Proxy failed, try without proxy if available
@@ -290,20 +327,21 @@ class ShopifyChecker:
                 try:
                     response = self.session.get(url, timeout=self.timeout)
                     # Retry without proxy
-                    return self._analyze_response(response)
+                    status = self._analyze_response(response)
+                    return (status, checked_timezone)
                 except:
-                    return "DEAD"
-            return "DEAD"
+                    return ("DEAD", checked_timezone)
+            return ("DEAD", checked_timezone)
         except requests.exceptions.Timeout:
-            return "DEAD"
+            return ("DEAD", checked_timezone)
         except requests.exceptions.ConnectionError:
-            return "DEAD" 
+            return ("DEAD", checked_timezone)
         except requests.exceptions.RequestException as e:
             print(f"Request error: {e}")
-            return "DEAD"
+            return ("DEAD", checked_timezone)
         except Exception as e:
             print(f"Unknown error: {e}")
-            return "UNKNOWN"
+            return ("UNKNOWN", checked_timezone)
     
     def _analyze_response(self, response) -> str:
         """Analyze response to determine store status"""
