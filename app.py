@@ -50,14 +50,14 @@ def scheduled_check_callback():
 
         # Check each store
         for url in data.keys():
-            status = st.session_state.checker.check_store_status(url)
+            status, timezone_checked = st.session_state.checker.check_store_status(url)
 
             # If DEAD, do second check
             if status == "DEAD":
                 time.sleep(1)
-                status = st.session_state.checker.check_store_status(url)
+                status, timezone_checked = st.session_state.checker.check_store_status(url)
 
-            st.session_state.data_manager.update_store_status(url, status)
+            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
 
         # Check for newly dead stores in the last 5 minutes
         newly_dead = st.session_state.data_manager.get_newly_dead_stores(
@@ -697,15 +697,15 @@ def check_all_stores():
                          total=total_urls,
                          url=url[:50]))
 
-            status = st.session_state.checker.check_store_status(url)
+            status, timezone_checked = st.session_state.checker.check_store_status(url)
 
             if status == "DEAD":
                 status_text.text(
                     get_text('rechecking_dead', lang, url=url[:50]))
                 time.sleep(1)
-                status = st.session_state.checker.check_store_status(url)
+                status, timezone_checked = st.session_state.checker.check_store_status(url)
 
-            st.session_state.data_manager.update_store_status(url, status)
+            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
 
         progress_bar.empty()
         status_text.empty()
@@ -745,8 +745,8 @@ def recheck_dead_stores():
             progress_bar.progress(progress)
             status_text.text(get_text('rechecking_dead', lang, url=url[:50]))
 
-            status = st.session_state.checker.check_store_status(url)
-            st.session_state.data_manager.update_store_status(url, status)
+            status, timezone_checked = st.session_state.checker.check_store_status(url)
+            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
 
         progress_bar.empty()
         status_text.empty()
@@ -992,11 +992,18 @@ def display_data_table(status_filter, search_term):
 
     df_data = []
     for url, data in filtered_data.items():
+        timezone_display = data.get('timezone_checked', '-')
+        if timezone_display and timezone_display != '-':
+            # Rút gọn tên múi giờ
+            timezone_display = timezone_display.split('/')[-1]
+        
         df_data.append({
             get_text('url', lang):
             url,
             get_text('status', lang):
             data.get('status', 'UNCHECKED'),
+            'Timezone' if lang == 'en' else 'Múi Giờ':
+            timezone_display,
             get_text('last_check', lang):
             convert_utc_to_pacific(data.get('last_check', 'Never')),
             get_text('first_dead_date', lang):
