@@ -39,8 +39,9 @@ class ShopifyChecker:
         self.manual_proxy = None
         
         # Random delay configuration (in seconds)
-        self.min_delay = float(os.getenv('CHECK_MIN_DELAY', '0.5'))
-        self.max_delay = float(os.getenv('CHECK_MAX_DELAY', '2.0'))
+        # Increased for safer checking with large batches
+        self.min_delay = float(os.getenv('CHECK_MIN_DELAY', '1.5'))
+        self.max_delay = float(os.getenv('CHECK_MAX_DELAY', '4.0'))
         
         # Smart US timezone-aware delay
         self.use_smart_delay = os.getenv('USE_SMART_DELAY', 'true').lower() == 'true'
@@ -207,6 +208,17 @@ class ShopifyChecker:
         local_time = utc_now.astimezone(tz)
         hour = local_time.hour
         
+        # Update Accept-Language header to match timezone region
+        language_map = {
+            'America/Los_Angeles': 'en-US,en;q=0.9',  # West Coast
+            'America/Denver': 'en-US,en;q=0.9',       # Mountain
+            'America/Chicago': 'en-US,en;q=0.9',      # Central
+            'America/New_York': 'en-US,en;q=0.9'      # East Coast
+        }
+        self.session.headers.update({
+            'Accept-Language': language_map.get(random_tz_name, 'en-US,en;q=0.9')
+        })
+        
         # Debug log to verify randomization
         print(f"🎲 Random TZ: {random_tz_name} | Local: {hour}:00 | ", end="")
         
@@ -246,12 +258,12 @@ class ShopifyChecker:
         multiplier = self._get_random_us_timezone_factor()
         
         # Add random jitter to make pattern unpredictable
-        jitter = random.uniform(0.8, 1.2)
+        jitter = random.uniform(0.7, 1.4)  # Increased variation
         
         final_delay = base_delay * multiplier * jitter
         
-        # Cap maximum delay at 10 seconds to avoid too long waits
-        final_delay = min(final_delay, 10.0)
+        # Cap maximum delay at 15 seconds for safety with large batches
+        final_delay = min(final_delay, 15.0)
         
         time.sleep(final_delay)
 
@@ -262,9 +274,6 @@ class ShopifyChecker:
         status: LIVE, DEAD, UNPAID, or UNKNOWN
         timezone_checked: US timezone used for this check
         """
-        # Get the timezone that will be used for this check
-        checked_timezone = self._get_last_checked_timezone()
-        
         try:
             # Ensure URL has proper format
             if not url.startswith('http'):
@@ -272,6 +281,12 @@ class ShopifyChecker:
             
             # Get proxy for this request
             proxy = self._get_next_proxy()
+            
+            # Random delay BEFORE making request (this also randomly picks timezone)
+            self._random_delay()
+            
+            # Get the timezone that was just used for delay calculation
+            checked_timezone = self._get_last_checked_timezone()
             
             # Make request with timeout and optional proxy
             response = self.session.get(
@@ -321,17 +336,9 @@ class ShopifyChecker:
                 return (f"UNKNOWN ({status_code})", checked_timezone)
                 
         except requests.exceptions.ProxyError as e:
-            # Proxy failed, try without proxy if available
-            print(f"Proxy error: {e}")
-            if self.use_proxy or self.manual_proxy:
-                try:
-                    response = self.session.get(url, timeout=self.timeout)
-                    # Retry without proxy
-                    status = self._analyze_response(response)
-                    return (status, checked_timezone)
-                except:
-                    return ("DEAD", checked_timezone)
-            return ("DEAD", checked_timezone)
+            # Proxy failed - return UNKNOWN instead of DEAD
+            print(f"⚠️ Proxy error for {url[:50]}: {e}")
+            return ("UNKNOWN (Proxy Failed)", checked_timezone)
         except requests.exceptions.Timeout:
             return ("DEAD", checked_timezone)
         except requests.exceptions.ConnectionError:
@@ -382,6 +389,7 @@ class ShopifyChecker:
     def batch_check_stores(self, urls: list, progress_callback=None) -> Dict[str, str]:
         """
         Check multiple stores with progress tracking and random delays
+        NOTE: Random delay is now handled INSIDE check_store_status for each URL
         """
         results = {}
         total = len(urls)
@@ -391,10 +399,6 @@ class ShopifyChecker:
                 progress_callback(i + 1, total, url)
             
             results[url] = self.check_store_status(url)
-            
-            # Random delay between requests to avoid detection
-            if i < total - 1:  # Don't delay after last item
-                self._random_delay()
         
         return results
 
