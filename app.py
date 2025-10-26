@@ -709,6 +709,17 @@ def check_all_stores():
     with progress_container:
         progress_bar = st.progress(0)
         status_text = st.empty()
+        
+        # Add live metrics to prevent WebSocket timeout
+        col1, col2, col3, col4 = st.columns(4)
+        live_counter = col1.empty()
+        dead_counter = col2.empty()
+        unpaid_counter = col3.empty()
+        checked_counter = col4.empty()
+        
+        live_count = 0
+        dead_count = 0
+        unpaid_count = 0
 
         for i, (url, store_data) in enumerate(data.items()):
             progress = (i + 1) / total_urls
@@ -729,6 +740,19 @@ def check_all_stores():
                 status, timezone_checked = st.session_state.checker.check_store_status(url)
 
             st.session_state.data_manager.update_store_status(url, status, timezone_checked)
+            
+            # Update live counters to keep WebSocket alive
+            if status == "LIVE":
+                live_count += 1
+            elif status == "DEAD":
+                dead_count += 1
+            elif status == "UNPAID":
+                unpaid_count += 1
+            
+            live_counter.metric("✅ Live", live_count, delta=f"{(live_count/(i+1)*100):.1f}%")
+            dead_counter.metric("❌ Dead", dead_count, delta=f"{(dead_count/(i+1)*100):.1f}%")
+            unpaid_counter.metric("⚠️ Unpaid", unpaid_count, delta=f"{(unpaid_count/(i+1)*100):.1f}%")
+            checked_counter.metric("📊 Checked", i + 1, delta=f"{((i+1)/total_urls*100):.1f}%")
 
         progress_bar.empty()
         status_text.empty()
