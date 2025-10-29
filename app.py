@@ -12,6 +12,7 @@ from utils.export_manager import ExportManager
 from utils.telegram_notifier import TelegramNotifier
 from utils.scheduler import CheckScheduler
 from utils.i18n import get_text
+from utils.template_generator import PageTemplateGenerator
 
 # Configure page
 st.set_page_config(page_title="Shopify Store Monitor",
@@ -24,18 +25,19 @@ def convert_utc_to_pacific(utc_timestamp_str):
     """Convert UTC ISO timestamp string to Pacific timezone string"""
     if not utc_timestamp_str or utc_timestamp_str in ['Never', '-', None]:
         return utc_timestamp_str
-    
+
     try:
         pacific_tz = pytz.timezone('America/Los_Angeles')
-        
+
         if isinstance(utc_timestamp_str, str):
-            utc_dt = datetime.fromisoformat(utc_timestamp_str.replace('Z', '+00:00'))
+            utc_dt = datetime.fromisoformat(
+                utc_timestamp_str.replace('Z', '+00:00'))
         else:
             utc_dt = utc_timestamp_str
-        
+
         if utc_dt.tzinfo is None:
             utc_dt = pytz.UTC.localize(utc_dt)
-        
+
         pacific_dt = utc_dt.astimezone(pacific_tz)
         return pacific_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
     except Exception as e:
@@ -45,16 +47,16 @@ def convert_utc_to_pacific(utc_timestamp_str):
 def scheduled_check_callback():
     """Callback function for scheduled checks - runs in separate thread"""
     try:
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("🔄 SCHEDULED CHECK CALLBACK STARTED")
-        print("="*50)
-        
+        print("=" * 50)
+
         # Create standalone instances for thread (can't use st.session_state in threads)
         print("📦 Creating instances...")
         data_manager = DatabaseManager()
         checker = ShopifyChecker()
         telegram_notifier = TelegramNotifier()
-        
+
         # Get all stores
         data = data_manager.get_data()
         print(f"📊 Found {len(data)} stores to check")
@@ -80,7 +82,9 @@ def scheduled_check_callback():
 
         # Send Telegram notification if there are newly dead stores
         if newly_dead:
-            print(f"📢 Attempting to notify about {len(newly_dead)} dead stores...")
+            print(
+                f"📢 Attempting to notify about {len(newly_dead)} dead stores..."
+            )
             result = telegram_notifier.notify_dead_stores(newly_dead)
             print(f"   Notification result: {result}")
         else:
@@ -90,17 +94,17 @@ def scheduled_check_callback():
         print("\n🔍 Checking for status changes (last 5 min)...")
         changes = data_manager.get_latest_changes(minutes=5)
         print(f"   Found {len(changes)} status changes")
-        
+
         if changes:
             print(f"📢 Attempting to notify about {len(changes)} changes...")
             result = telegram_notifier.notify_status_changes(changes)
             print(f"   Notification result: {result}")
         else:
             print("   No status changes to notify")
-        
-        print("\n" + "="*50)
+
+        print("\n" + "=" * 50)
         print("✅ SCHEDULED CHECK CALLBACK COMPLETED")
-        print("="*50 + "\n")
+        print("=" * 50 + "\n")
 
     except Exception as e:
         print(f"\n❌ ERROR in scheduled check: {e}")
@@ -124,6 +128,8 @@ if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 if 'language' not in st.session_state:
     st.session_state.language = 'vi'
+if 'generated_templates' not in st.session_state:
+    st.session_state.generated_templates = None
 
 
 @st.cache_data(ttl=10, show_spinner=False)
@@ -298,88 +304,118 @@ def main():
         st.markdown("---")
 
         # Proxy configuration status
-        st.subheader("🌐 Proxy Configuration" if lang == 'en' else "🌐 Cấu Hình Proxy")
-        
+        st.subheader("🌐 Proxy Configuration" if lang ==
+                     'en' else "🌐 Cấu Hình Proxy")
+
         proxy_info = st.session_state.checker.get_proxy_info()
-        
+
         # Manual proxy picker
         if 'manual_proxy_input' not in st.session_state:
             st.session_state.manual_proxy_input = ''
-        
+
         manual_proxy_input = st.text_input(
-            "🎯 " + ("Pick Proxy (Manual)" if lang == 'en' else "Chọn Proxy (Thủ Công)"),
+            "🎯 " + ("Pick Proxy (Manual)"
+                    if lang == 'en' else "Chọn Proxy (Thủ Công)"),
             value=st.session_state.manual_proxy_input,
-            placeholder="socks5://127.0.0.1:60000" if lang == 'vi' else "socks5://127.0.0.1:60000",
-            help="HTTP, HTTPS, SOCKS5 supported. Example: socks5://127.0.0.1:60000" if lang == 'en' else "Hỗ trợ HTTP, HTTPS, SOCKS5. Ví dụ: socks5://127.0.0.1:60000",
-            key="proxy_picker"
-        )
-        
+            placeholder="socks5://127.0.0.1:60000"
+            if lang == 'vi' else "socks5://127.0.0.1:60000",
+            help=
+            "HTTP, HTTPS, SOCKS5 supported. Example: socks5://127.0.0.1:60000"
+            if lang == 'en' else
+            "Hỗ trợ HTTP, HTTPS, SOCKS5. Ví dụ: socks5://127.0.0.1:60000",
+            key="proxy_picker")
+
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✅ " + ("Apply Proxy" if lang == 'en' else "Áp Dụng Proxy"), key="apply_proxy"):
+            if st.button("✅ " +
+                         ("Apply Proxy" if lang == 'en' else "Áp Dụng Proxy"),
+                         key="apply_proxy"):
                 if manual_proxy_input.strip():
-                    st.session_state.checker.set_manual_proxy(manual_proxy_input.strip())
-                    st.session_state.manual_proxy_input = manual_proxy_input.strip()
-                    st.success("✅ " + ("Proxy applied!" if lang == 'en' else "Đã áp dụng proxy!"))
+                    st.session_state.checker.set_manual_proxy(
+                        manual_proxy_input.strip())
+                    st.session_state.manual_proxy_input = manual_proxy_input.strip(
+                    )
+                    st.success("✅ " + ("Proxy applied!" if lang ==
+                                       'en' else "Đã áp dụng proxy!"))
                     st.rerun()
                 else:
-                    st.warning("⚠️ " + ("Please enter a proxy URL" if lang == 'en' else "Vui lòng nhập URL proxy"))
-        
+                    st.warning("⚠️ " + ("Please enter a proxy URL" if lang ==
+                                        'en' else "Vui lòng nhập URL proxy"))
+
         with col2:
-            if st.button("🔄 " + ("Clear Proxy" if lang == 'en' else "Xóa Proxy"), key="clear_proxy"):
+            if st.button("🔄 " +
+                         ("Clear Proxy" if lang == 'en' else "Xóa Proxy"),
+                         key="clear_proxy"):
                 st.session_state.checker.set_manual_proxy(None)
                 st.session_state.manual_proxy_input = ''
-                st.success("✅ " + ("Proxy cleared!" if lang == 'en' else "Đã xóa proxy!"))
+                st.success("✅ " + (
+                    "Proxy cleared!" if lang == 'en' else "Đã xóa proxy!"))
                 st.rerun()
-        
+
         # Show status
         if proxy_info['has_manual_proxy']:
-            st.info(f"🎯 {'Using manual proxy' if lang == 'en' else 'Đang dùng proxy thủ công'}: `{proxy_info['manual_proxy']}`")
+            st.info(
+                f"🎯 {'Using manual proxy' if lang == 'en' else 'Đang dùng proxy thủ công'}: `{proxy_info['manual_proxy']}`"
+            )
         elif proxy_info['enabled']:
-            st.success(f"✅ {'Auto-rotating' if lang == 'en' else 'Tự động xoay'}: {proxy_info['total_proxies']} proxy")
+            st.success(
+                f"✅ {'Auto-rotating' if lang == 'en' else 'Tự động xoay'}: {proxy_info['total_proxies']} proxy"
+            )
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Min Delay", f"{proxy_info['min_delay']}s")
             with col2:
                 st.metric("Max Delay", f"{proxy_info['max_delay']}s")
         else:
-            st.warning("⚠️ " + ("No proxy configured" if lang == 'en' else "Chưa cấu hình proxy"))
-        
+            st.warning("⚠️ " + ("No proxy configured" if lang ==
+                                'en' else "Chưa cấu hình proxy"))
+
         st.markdown("---")
-        
+
         # US Timezone Status
-        st.subheader("🕐 US Timezone Status" if lang == 'en' else "🕐 Trạng Thái Múi Giờ US")
-        
+        st.subheader("🕐 US Timezone Status" if lang ==
+                     'en' else "🕐 Trạng Thái Múi Giờ US")
+
         tz_status = st.session_state.checker.get_us_timezone_status()
-        
+
         if tz_status['smart_delay_enabled']:
-            st.success("✅ " + ("Smart delay: Random US timezone mode" if lang == 'en' else "Smart delay: Chế độ random múi giờ US"))
-            st.info("🎲 " + ("Each check randomly picks a US timezone for natural behavior" if lang == 'en' else "Mỗi lần check sẽ random 1 múi giờ US để giống người dùng thật"))
-            
+            st.success("✅ " +
+                       ("Smart delay: Random US timezone mode" if lang ==
+                        'en' else "Smart delay: Chế độ random múi giờ US"))
+            st.info("🎲 " + (
+                "Each check randomly picks a US timezone for natural behavior"
+                if lang == 'en' else
+                "Mỗi lần check sẽ random 1 múi giờ US để giống người dùng thật"
+            ))
+
             # Show each timezone
-            with st.expander("📍 " + ("View all US timezones" if lang == 'en' else "Xem tất cả múi giờ US")):
+            with st.expander("📍 " + ("View all US timezones" if lang ==
+                                     'en' else "Xem tất cả múi giờ US")):
                 for tz_name, info in tz_status['timezones'].items():
-                    status_icon = "🔴" if info['is_peak_hours'] else "🟢" if info['is_off_hours'] else "🟡"
+                    status_icon = "🔴" if info['is_peak_hours'] else "🟢" if info[
+                        'is_off_hours'] else "🟡"
                     st.text(f"{status_icon} {tz_name}: {info['current_time']}")
         else:
-            st.info("ℹ️ " + ("Smart delay disabled" if lang == 'en' else "Smart delay đang tắt"))
-            with st.expander("📖 " + ("Setup Instructions" if lang == 'en' else "Hướng Dẫn Cấu Hình")):
+            st.info("ℹ️ " + ("Smart delay disabled" if lang ==
+                             'en' else "Smart delay đang tắt"))
+            with st.expander("📖 " + ("Setup Instructions" if lang ==
+                                     'en' else "Hướng Dẫn Cấu Hình")):
                 if lang == 'en':
                     st.markdown("""
                     **To enable proxy protection:**
-                    
+
                     Add to your Secrets (environment variables):
-                    
+
                     **Single proxy:**
                     - `PROXY_URL` = `http://username:password@proxy-ip:port`
-                    
+
                     **Multiple proxies (auto-rotate):**
                     - `PROXY_LIST` = `http://user:pass@ip1:port,http://user:pass@ip2:port`
-                    
+
                     **Optional delay settings:**
                     - `CHECK_MIN_DELAY` = `0.5` (minimum seconds between checks)
                     - `CHECK_MAX_DELAY` = `2.0` (maximum seconds between checks)
-                    
+
                     **Example US proxy format:**
                     ```
                     PROXY_URL=http://username:password@us-proxy.example.com:8080
@@ -388,24 +424,24 @@ def main():
                 else:
                     st.markdown("""
                     **Để bật bảo vệ proxy:**
-                    
+
                     Thêm vào Secrets (biến môi trường):
-                    
+
                     **Proxy đơn:**
                     - `PROXY_URL` = `http://username:password@proxy-ip:port`
-                    
+
                     **Nhiều proxy (tự động xoay):**
                     - `PROXY_LIST` = `http://user:pass@ip1:port,http://user:pass@ip2:port`
-                    
+
                     **Cài đặt delay (tùy chọn):**
                     - `CHECK_MIN_DELAY` = `0.5` (số giây tối thiểu giữa các lần check)
                     - `CHECK_MAX_DELAY` = `2.0` (số giây tối đa giữa các lần check)
-                    
+
                     **Ví dụ định dạng proxy IP Mỹ:**
                     ```
                     PROXY_URL=http://username:password@us-proxy.example.com:8080
                     ```
-                    
+
                     **Lưu ý:** Proxy IP Mỹ giúp ẩn IP thật của bạn khi check links.
                     """)
 
@@ -527,6 +563,8 @@ def main():
         st.metric(get_text('unpaid_stores', lang), unpaid_count,
                   f"{unpaid_percentage:.1f}%")
 
+    st.markdown("---")
+
     # Charts
     if total_count > 0:
         # Create tabs for different chart views
@@ -569,12 +607,12 @@ def main():
             if timeline_data:
                 # Stacked area chart for status over time
                 fig_area = create_stacked_area_chart_from_data(
-                    timeline_data, days_filter)
+                    timeline_data, days=days_filter)
                 st.plotly_chart(fig_area, use_container_width=True)
 
                 # Line chart for individual status trends
                 fig_line = create_status_trend_lines_from_data(
-                    timeline_data, days_filter)
+                    timeline_data, days=days_filter)
                 st.plotly_chart(fig_line, use_container_width=True)
             else:
                 st.info(get_text('no_timeline_data', lang, days=days_filter))
@@ -693,6 +731,170 @@ def main():
     # Data table
     display_data_table(status_filter, search_term)
 
+    # Page Template Generator (moved to bottom)
+    st.markdown("---")
+    with st.expander("📄 " + ("Shopify Page Templates Generator"
+                             if lang == 'en' else "Tạo Tài Liệu Shopify"),
+                     expanded=False):
+        if lang == 'en':
+            st.markdown("""
+            Generate professional **About Us** and **Shipping Policy** pages for your Shopify store.
+            Simply fill in your store information below and get ready-to-use page content.
+            """)
+        else:
+            st.markdown("""
+            Tạo nội dung chuyên nghiệp cho trang **Giới Thiệu** và **Chính Sách Vận Chuyển** cho store Shopify của bạn.
+            Chỉ cần điền thông tin store và nhận nội dung sẵn sàng sử dụng.
+            """)
+
+        # Input section
+        col1, col2 = st.columns(2)
+
+        with col1:
+            store_name = st.text_input(
+                "🏪 " + ("Store Name" if lang == 'en' else "Tên Store"),
+                placeholder="My Awesome Store"
+                if lang == 'en' else "Store Tuyệt Vời Của Tôi",
+                help="Enter your store name"
+                if lang == 'en' else "Nhập tên store của bạn",
+                key="template_store_name")
+
+        with col2:
+            support_email = st.text_input(
+                "📧 " + ("Support Email" if lang == 'en' else "Email Hỗ Trợ"),
+                placeholder="support@mystore.com",
+                help="Enter your customer support email"
+                if lang == 'en' else "Nhập email hỗ trợ khách hàng",
+                key="template_support_email")
+
+        # Auto-generate social media username from store name
+        social_username = ""
+        if store_name.strip():
+            # Convert to lowercase, remove spaces and special characters
+            social_username = store_name.strip().lower().replace(
+                " ", "").replace("-", "").replace("_", "")
+            # Remove any non-alphanumeric characters
+            social_username = ''.join(c for c in social_username
+                                      if c.isalnum())
+
+        # Optional social media links with auto-filled username
+        default_social = ""
+        if social_username:
+            default_social = f"""Facebook: https://facebook.com/{social_username}
+Instagram: https://instagram.com/{social_username}
+Twitter: https://twitter.com/{social_username}"""
+        else:
+            default_social = """Facebook: https://facebook.com/yourstore
+Instagram: https://instagram.com/yourstore
+Twitter: https://twitter.com/yourstore""" if lang == 'en' else """Facebook: https://facebook.com/storecutban
+Instagram: https://instagram.com/storecutban
+Twitter: https://twitter.com/storecutban"""
+
+        social_links = st.text_area(
+            "🔗 " + ("Social Media Links (Optional)"
+                    if lang == 'en' else "Links Mạng Xã Hội (Tùy Chọn)"),
+            value=default_social if social_username else "",
+            placeholder=default_social,
+            height=80,
+            key="template_social_links",
+            help="Auto-generated from store name. Edit as needed."
+            if lang == 'en' else "Tự động tạo từ tên store. Có thể chỉnh sửa.")
+
+        # Generate button
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            if st.button(
+                    "✨ " +
+                ("Generate Templates" if lang == 'en' else "Tạo Tài Liệu"),
+                    type="primary",
+                    use_container_width=True,
+                    key="generate_templates_btn"):
+                if store_name.strip() and support_email.strip():
+                    with st.spinner(("Generating templates..." if lang == 'en'
+                                     else "Đang tạo tài liệu...")):
+                        # Generate templates
+                        st.session_state.generated_templates = PageTemplateGenerator.generate_both_templates(
+                            store_name.strip(), support_email.strip(),
+                            social_links.strip()
+                            if social_links.strip() else "")
+                else:
+                    st.warning("⚠️ " + (
+                        "Please fill in both Store Name and Support Email"
+                        if lang == 'en' else
+                        "Vui lòng điền đầy đủ Tên Store và Email Hỗ Trợ"))
+
+        with col2:
+            if st.button("🔄 " + ("Clear" if lang == 'en' else "Xóa"),
+                         use_container_width=True,
+                         key="clear_templates_btn"):
+                st.session_state.generated_templates = None
+                st.rerun()
+
+        # Display results if templates were generated
+        if st.session_state.generated_templates:
+            templates = st.session_state.generated_templates
+
+            # Display results
+            st.success("✅ " + ("Templates generated successfully!" if lang ==
+                               'en' else "Tạo tài liệu thành công!"))
+
+            # Show which templates were selected
+            st.info(
+                ("🎲 **Random Templates Selected:**" if lang ==
+                 'en' else "🎲 **Templates Ngẫu Nhiên Được Chọn:**") +
+                f"\n- About Us: **{templates['about_us_template']}**" +
+                f"\n- Shipping Policy: **{templates['shipping_policy_template']}**"
+            )
+
+            # About Us Page
+            st.markdown("### 📖 " + (
+                "About Us Page" if lang == 'en' else "Trang Giới Thiệu"))
+            about_us_container = st.container(border=True)
+            with about_us_container:
+                st.text_area(
+                    ("Copy this content to your About Us page:" if lang == 'en'
+                     else "Copy nội dung này vào trang Giới Thiệu:"),
+                    value=templates['about_us'],
+                    height=300,
+                    key="about_us_output")
+                st.download_button(
+                    "📥 " + ("Download About Us"
+                            if lang == 'en' else "Tải Xuống Giới Thiệu"),
+                    data=templates['about_us'],
+                    file_name=f"{store_name.replace(' ', '_')}_About_Us.txt",
+                    mime="text/plain",
+                    key="download_about_us")
+
+            st.markdown("---")
+
+            # Shipping Policy Page
+            st.markdown("### 🚚 " + ("Shipping Policy Page" if lang ==
+                                    'en' else "Trang Chính Sách Vận Chuyển"))
+            shipping_container = st.container(border=True)
+            with shipping_container:
+                st.text_area(
+                    ("Copy this content to your Shipping Policy page:"
+                     if lang == 'en' else
+                     "Copy nội dung này vào trang Chính Sách Vận Chuyển:"),
+                    value=templates['shipping_policy'],
+                    height=300,
+                    key="shipping_output")
+                st.download_button(
+                    "📥 " + ("Download Shipping Policy"
+                            if lang == 'en' else "Tải Xuống Chính Sách"),
+                    data=templates['shipping_policy'],
+                    file_name=
+                    f"{store_name.replace(' ', '_')}_Shipping_Policy.txt",
+                    mime="text/plain",
+                    key="download_shipping")
+
+            # Instructions
+            st.info("💡 " + (
+                "Tip: Copy the content above and paste it into your Shopify store pages (Online Store > Pages > Add page)"
+                if lang == 'en' else
+                "Mẹo: Copy nội dung bên trên và dán vào trang Shopify (Online Store > Pages > Add page)"
+            ))
+
 
 def check_all_stores():
     """Check all stores with progress tracking"""
@@ -709,14 +911,14 @@ def check_all_stores():
     with progress_container:
         progress_bar = st.progress(0)
         status_text = st.empty()
-        
+
         # Add live metrics to prevent WebSocket timeout
         col1, col2, col3, col4 = st.columns(4)
         live_counter = col1.empty()
         dead_counter = col2.empty()
         unpaid_counter = col3.empty()
         checked_counter = col4.empty()
-        
+
         live_count = 0
         dead_count = 0
         unpaid_count = 0
@@ -731,16 +933,19 @@ def check_all_stores():
                          total=total_urls,
                          url=url[:50]))
 
-            status, timezone_checked = st.session_state.checker.check_store_status(url)
+            status, timezone_checked = st.session_state.checker.check_store_status(
+                url)
 
             if status == "DEAD":
                 status_text.text(
                     get_text('rechecking_dead', lang, url=url[:50]))
                 time.sleep(1)
-                status, timezone_checked = st.session_state.checker.check_store_status(url)
+                status, timezone_checked = st.session_state.checker.check_store_status(
+                    url)
 
-            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
-            
+            st.session_state.data_manager.update_store_status(
+                url, status, timezone_checked)
+
             # Update live counters to keep WebSocket alive
             if status == "LIVE":
                 live_count += 1
@@ -748,11 +953,19 @@ def check_all_stores():
                 dead_count += 1
             elif status == "UNPAID":
                 unpaid_count += 1
-            
-            live_counter.metric("✅ Live", live_count, delta=f"{(live_count/(i+1)*100):.1f}%")
-            dead_counter.metric("❌ Dead", dead_count, delta=f"{(dead_count/(i+1)*100):.1f}%")
-            unpaid_counter.metric("⚠️ Unpaid", unpaid_count, delta=f"{(unpaid_count/(i+1)*100):.1f}%")
-            checked_counter.metric("📊 Checked", i + 1, delta=f"{((i+1)/total_urls*100):.1f}%")
+
+            live_counter.metric("✅ Live",
+                                live_count,
+                                delta=f"{(live_count/(i+1)*100):.1f}%")
+            dead_counter.metric("❌ Dead",
+                                dead_count,
+                                delta=f"{(dead_count/(i+1)*100):.1f}%")
+            unpaid_counter.metric("⚠️ Unpaid",
+                                  unpaid_count,
+                                  delta=f"{(unpaid_count/(i+1)*100):.1f}%")
+            checked_counter.metric("📊 Checked",
+                                   i + 1,
+                                   delta=f"{((i+1)/total_urls*100):.1f}%")
 
         progress_bar.empty()
         status_text.empty()
@@ -792,8 +1005,10 @@ def recheck_dead_stores():
             progress_bar.progress(progress)
             status_text.text(get_text('rechecking_dead', lang, url=url[:50]))
 
-            status, timezone_checked = st.session_state.checker.check_store_status(url)
-            st.session_state.data_manager.update_store_status(url, status, timezone_checked)
+            status, timezone_checked = st.session_state.checker.check_store_status(
+                url)
+            st.session_state.data_manager.update_store_status(
+                url, status, timezone_checked)
 
         progress_bar.empty()
         status_text.empty()
@@ -969,7 +1184,8 @@ def display_status_changes(changes):
     lang = st.session_state.language
     df_changes = pd.DataFrame(changes)
 
-    df_changes['changed_at'] = df_changes['changed_at'].apply(convert_utc_to_pacific)
+    df_changes['changed_at'] = df_changes['changed_at'].apply(
+        convert_utc_to_pacific)
 
     df_changes = df_changes.rename(
         columns={
@@ -1043,7 +1259,7 @@ def display_data_table(status_filter, search_term):
         if timezone_display and timezone_display != '-':
             # Rút gọn tên múi giờ
             timezone_display = timezone_display.split('/')[-1]
-        
+
         df_data.append({
             get_text('url', lang):
             url,
