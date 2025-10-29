@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta
 import time
 import os
 import pytz
+import re
 from utils.link_checker import ShopifyChecker
 from utils.db_manager import DatabaseManager
 from utils.export_manager import ExportManager
@@ -19,6 +21,91 @@ st.set_page_config(page_title="Shopify Store Monitor",
                    page_icon="🛍️",
                    layout="wide",
                    initial_sidebar_state="expanded")
+
+
+def text_to_html(text):
+    """Convert plain text to clean HTML matching markdown preview exactly"""
+    # Simply return the text with proper line breaks and paragraphs
+    # This matches what Streamlit markdown displays
+    lines = text.split('\n')
+    html_lines = []
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Empty lines = line break
+        if not stripped:
+            html_lines.append('<br>')
+            continue
+        
+        # Keep the line as-is in a paragraph
+        html_lines.append(f'<p>{stripped}</p>')
+    
+    html = '\n'.join(html_lines)
+    
+    # Convert URLs to clickable links
+    url_pattern = r'(https?://[^\s<>]+)'
+    html = re.sub(url_pattern, r'<a href="\1" target="_blank">\1</a>', html)
+    
+    # Convert email addresses to mailto links
+    email_pattern = r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    html = re.sub(email_pattern, r'<a href="mailto:\1">\1</a>', html)
+    
+    return html
+
+
+def create_copy_html_button(content, button_text="Copy HTML", button_id="copy_btn"):
+    """Create a button that copies HTML to clipboard"""
+    html_content = text_to_html(content)
+    
+    # Escape backticks for JavaScript
+    escaped_html = html_content.replace('`', '\\`')
+    
+    # Create HTML with copy button and script
+    copy_button_html = f'''
+    <div style="margin: 10px 0;">
+        <button id="{button_id}" onclick="copyHTML_{button_id}()" 
+                style="background-color: #4CAF50; 
+                       color: white; 
+                       padding: 10px 20px; 
+                       border: none; 
+                       border-radius: 5px; 
+                       cursor: pointer;
+                       font-size: 14px;
+                       font-weight: bold;">
+            {button_text}
+        </button>
+        <span id="status_{button_id}" style="margin-left: 10px; color: green; font-weight: bold;"></span>
+    </div>
+    
+    <script>
+    function copyHTML_{button_id}() {{
+        const htmlContent = `{escaped_html}`;
+        
+        // Create a blob with HTML mime type
+        const blob = new Blob([htmlContent], {{ type: 'text/html' }});
+        const clipboardItem = new ClipboardItem({{ 'text/html': blob }});
+        
+        // Copy to clipboard
+        navigator.clipboard.write([clipboardItem]).then(function() {{
+            document.getElementById('status_{button_id}').innerText = '✅ Đã copy!';
+            setTimeout(function() {{
+                document.getElementById('status_{button_id}').innerText = '';
+            }}, 2000);
+        }}).catch(function(err) {{
+            // Fallback: copy as plain text
+            navigator.clipboard.writeText(htmlContent).then(function() {{
+                document.getElementById('status_{button_id}').innerText = '✅ Đã copy HTML!';
+                setTimeout(function() {{
+                    document.getElementById('status_{button_id}').innerText = '';
+                }}, 2000);
+            }});
+        }});
+    }}
+    </script>
+    '''
+    
+    return copy_button_html
 
 
 def convert_utc_to_pacific(utc_timestamp_str):
@@ -812,11 +899,13 @@ Twitter: https://twitter.com/storecutban"""
                 if store_name.strip() and support_email.strip():
                     with st.spinner(("Generating templates..." if lang == 'en'
                                      else "Đang tạo tài liệu...")):
+                        # Use auto-generated social links if user didn't provide custom ones
+                        final_social_links = social_links.strip() if social_links.strip() else default_social
+                        
                         # Generate templates
                         st.session_state.generated_templates = PageTemplateGenerator.generate_both_templates(
                             store_name.strip(), support_email.strip(),
-                            social_links.strip()
-                            if social_links.strip() else "")
+                            final_social_links)
                 else:
                     st.warning("⚠️ " + (
                         "Please fill in both Store Name and Support Email"
@@ -851,19 +940,41 @@ Twitter: https://twitter.com/storecutban"""
                 "About Us Page" if lang == 'en' else "Trang Giới Thiệu"))
             about_us_container = st.container(border=True)
             with about_us_container:
-                st.text_area(
-                    ("Copy this content to your About Us page:" if lang == 'en'
-                     else "Copy nội dung này vào trang Giới Thiệu:"),
-                    value=templates['about_us'],
-                    height=300,
-                    key="about_us_output")
-                st.download_button(
-                    "📥 " + ("Download About Us"
-                            if lang == 'en' else "Tải Xuống Giới Thiệu"),
-                    data=templates['about_us'],
-                    file_name=f"{store_name.replace(' ', '_')}_About_Us.txt",
-                    mime="text/plain",
-                    key="download_about_us")
+                # Display as markdown with clickable links
+                st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
+                           else "Xem trước với link có thể click:") + "**")
+                
+                # Convert URLs to markdown links for display
+                import re
+                display_text = templates['about_us']
+                # Find URLs and make them clickable
+                url_pattern = r'(https?://[^\s\)]+)'
+                display_text_md = re.sub(url_pattern, r'[\1](\1)', display_text)
+                
+                st.markdown(display_text_md)
+                
+                st.markdown("---")
+                
+                # Copy and Download buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Copy HTML button with JavaScript
+                    copy_html_btn = create_copy_html_button(
+                        templates['about_us'],
+                        button_text="📋 " + ("Copy HTML (with links)" if lang == 'en' else "Copy HTML (giữ link)"),
+                        button_id="copy_about_us"
+                    )
+                    components.html(copy_html_btn, height=60)
+                
+                with col2:
+                    st.download_button(
+                        "📥 " + ("Download About Us"
+                                if lang == 'en' else "Tải Xuống Giới Thiệu"),
+                        data=templates['about_us'],
+                        file_name=f"{store_name.replace(' ', '_')}_About_Us.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="download_about_us")
 
             st.markdown("---")
 
@@ -872,21 +983,42 @@ Twitter: https://twitter.com/storecutban"""
                                     'en' else "Trang Chính Sách Vận Chuyển"))
             shipping_container = st.container(border=True)
             with shipping_container:
-                st.text_area(
-                    ("Copy this content to your Shipping Policy page:"
-                     if lang == 'en' else
-                     "Copy nội dung này vào trang Chính Sách Vận Chuyển:"),
-                    value=templates['shipping_policy'],
-                    height=300,
-                    key="shipping_output")
-                st.download_button(
-                    "📥 " + ("Download Shipping Policy"
-                            if lang == 'en' else "Tải Xuống Chính Sách"),
-                    data=templates['shipping_policy'],
-                    file_name=
-                    f"{store_name.replace(' ', '_')}_Shipping_Policy.txt",
-                    mime="text/plain",
-                    key="download_shipping")
+                # Display as markdown with clickable links
+                st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
+                           else "Xem trước với link có thể click:") + "**")
+                
+                # Convert URLs to markdown links for display
+                import re
+                display_text = templates['shipping_policy']
+                # Find URLs and make them clickable
+                url_pattern = r'(https?://[^\s\)]+)'
+                display_text_md = re.sub(url_pattern, r'[\1](\1)', display_text)
+                
+                st.markdown(display_text_md)
+                
+                st.markdown("---")
+                
+                # Copy and Download buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Copy HTML button with JavaScript
+                    copy_html_btn = create_copy_html_button(
+                        templates['shipping_policy'],
+                        button_text="📋 " + ("Copy HTML (with links)" if lang == 'en' else "Copy HTML (giữ link)"),
+                        button_id="copy_shipping"
+                    )
+                    components.html(copy_html_btn, height=60)
+                
+                with col2:
+                    st.download_button(
+                        "📥 " + ("Download Shipping Policy"
+                                if lang == 'en' else "Tải Xuống Chính Sách"),
+                        data=templates['shipping_policy'],
+                        file_name=
+                        f"{store_name.replace(' ', '_')}_Shipping_Policy.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="download_shipping")
 
             # Instructions
             st.info("💡 " + (
