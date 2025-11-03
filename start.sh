@@ -14,7 +14,5 @@ pip install -r requirements.txt
 # Run migrations (safe if tables already exist)
 python migrate_to_db.py || echo "Migration script exited with non-zero code (continuing)"
 
-python add_timezone_column.py
-
 # Start Streamlit (bind to Render port)
 exec streamlit run app.py --server.port $PORT --server.address 0.0.0.0
