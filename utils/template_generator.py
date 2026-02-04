@@ -7,7 +7,13 @@ import random
 
 
 class PageTemplateGenerator:
-    """Generate customized Shopify page templates in plain text format"""
+    """Generate customized Shopify page templates in plain text format with non-repeating rotation"""
+    
+    # Class variables for rotation tracking
+    _about_us_indices = None
+    _about_us_current_index = 0
+    _shipping_policy_indices = None
+    _shipping_policy_current_index = 0
 
     ABOUT_US_TEMPLATES = [{
         "name":
@@ -595,6 +601,1665 @@ Thank you for supporting our family business. It means more than you know. 💙
 
 With gratitude,
 The {store_name} Family"""
+    }, {
+        "name": "Disruptive Innovator",
+        "content": """🚀 {store_name} - INNOVATION FIRST
+================================================================================
+
+Challenging the Status Quo
+--------------------------------------------------------------------------------
+
+We're not here to follow trends—we're here to set them. {store_name} was built on the belief that commerce should be smarter, faster, and more customer-centric.
+
+Our Approach: Tech-Driven Excellence
+--------------------------------------------------------------------------------
+
+💡 Data-Informed Decisions | ⚡ Rapid Innovation | 🎯 Customer-Obsessed
+
+We leverage cutting-edge technology to deliver products that solve real problems. Every item is vetted through our innovation framework.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Master Craftsman",
+        "content": """✨ {store_name} - WHERE CRAFT MEETS PASSION
+================================================================================
+
+Handmade with Heart
+--------------------------------------------------------------------------------
+
+Every product tells a story. At {store_name}, we celebrate the artisans, the makers, and the craftspeople who pour their soul into their work.
+
+Our Commitment to Quality
+--------------------------------------------------------------------------------
+
+🎨 Handpicked Artisans | 🔨 Traditional Techniques | ❤️ Made with Love
+
+We believe in quality that lasts, beauty that endures, and craftsmanship that honors tradition.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Value Champion",
+        "content": """{store_name} - QUALITY MEETS AFFORDABILITY
+================================================================================
+
+Great Products, Better Prices
+--------------------------------------------------------------------------------
+
+We believe everyone deserves access to quality products without breaking the bank. That's why we work tirelessly to bring you the best value possible.
+
+How We Keep Prices Low
+--------------------------------------------------------------------------------
+
+💰 Direct Sourcing | 📦 Efficient Operations | 🤝 Fair Partnerships
+
+Smart shopping shouldn't mean compromising on quality.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Wellness Advocate",
+        "content": """🌿 {store_name} - YOUR WELLNESS PARTNER
+================================================================================
+
+Health is Wealth
+--------------------------------------------------------------------------------
+
+At {store_name}, we're passionate about helping you live your healthiest, happiest life. Every product is chosen with your wellbeing in mind.
+
+Our Wellness Philosophy
+--------------------------------------------------------------------------------
+
+🍃 Natural Ingredients | 🧘 Holistic Approach | 💚 Sustainable Choices
+
+Your health journey starts here.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Adventure Seeker",
+        "content": """⛰️ {store_name} - GEAR FOR THE BOLD
+================================================================================
+
+Built for Explorers
+--------------------------------------------------------------------------------
+
+Life's an adventure, and we're here to equip you for it. {store_name} curates gear for those who refuse to stay still.
+
+Adventure Awaits
+--------------------------------------------------------------------------------
+
+🏔️ Tested in the Wild | 🎒 Adventure-Ready | 🌍 Explore More
+
+Get out there and make memories.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Essential Minimalist",
+        "content": """{store_name} - LESS IS MORE
+================================================================================
+
+Simplicity by Design
+--------------------------------------------------------------------------------
+
+In a world of excess, we choose intention. {store_name} offers carefully curated essentials that enhance your life without cluttering it.
+
+Minimalist Principles
+--------------------------------------------------------------------------------
+
+✨ Quality Over Quantity | 🎯 Purpose-Driven | 🖤 Timeless Design
+
+Live simply, live well.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Community First",
+        "content": """🤝 {store_name} - POWERED BY COMMUNITY
+================================================================================
+
+Together We're Stronger
+--------------------------------------------------------------------------------
+
+{store_name} isn't just a store—it's a community. We believe in the power of connection, collaboration, and collective impact.
+
+Our Community Values
+--------------------------------------------------------------------------------
+
+👥 People Over Profit | 💬 Open Dialogue | 🌟 Shared Success
+
+Join us and be part of something bigger.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Knowledge Sharer",
+        "content": """📚 {store_name} - SHOP SMARTER
+================================================================================
+
+Informed Choices, Better Outcomes
+--------------------------------------------------------------------------------
+
+We believe knowledge is power. That's why {store_name} goes beyond selling—we educate, inform, and empower our customers.
+
+Learn With Us
+--------------------------------------------------------------------------------
+
+📖 Expert Guides | 🎓 Product Education | 💡 Smart Shopping Tips
+
+Make confident, informed decisions.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Global Connector",
+        "content": """🌍 {store_name} - CONNECTING CULTURES
+================================================================================
+
+Bringing the World to Your Door
+--------------------------------------------------------------------------------
+
+{store_name} celebrates diversity by curating products from around the globe. Discover unique items that tell stories from different cultures.
+
+Our Global Mission
+--------------------------------------------------------------------------------
+
+🗺️ Worldwide Sourcing | 🎨 Cultural Appreciation | 🤝 Fair Trade
+
+Experience the world through shopping.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Trendsetter",
+        "content": """✨ {store_name} - AHEAD OF THE CURVE
+================================================================================
+
+Where Trends Are Born
+--------------------------------------------------------------------------------
+
+Don't follow trends—set them. {store_name} brings you tomorrow's must-haves today.
+
+Always First
+--------------------------------------------------------------------------------
+
+🎯 Trend Forecasting | 🚀 Early Access | 💫 Style Leadership
+
+Be the first to know, the first to own.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Sustainability Champion",
+        "content": """♻️ {store_name} - SHOP WITH PURPOSE
+================================================================================
+
+Good for You, Good for the Planet
+--------------------------------------------------------------------------------
+
+Every purchase at {store_name} is a vote for a sustainable future. We're committed to eco-friendly practices at every step.
+
+Our Green Promise
+--------------------------------------------------------------------------------
+
+🌱 Sustainable Materials | 📦 Eco Packaging | 🌍 Carbon Conscious
+
+Shop guilt-free.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Performance Driven",
+        "content": """⚡ {store_name} - BUILT TO PERFORM
+================================================================================
+
+For Those Who Demand More
+--------------------------------------------------------------------------------
+
+Average isn't in our vocabulary. {store_name} delivers high-performance products for high-performing people.
+
+Performance Standards
+--------------------------------------------------------------------------------
+
+🏆 Tested & Proven | 💪 Built to Last | 🎯 Results-Focused
+
+Elevate your game.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Nostalgic Curator",
+        "content": """🕰️ {store_name} - TIMELESS TREASURES
+================================================================================
+
+Bringing Back the Good Old Days
+--------------------------------------------------------------------------------
+
+{store_name} celebrates nostalgia with products that remind you of simpler times. Classic quality, vintage charm, modern convenience.
+
+Vintage Vibes, Modern Standards
+--------------------------------------------------------------------------------
+
+📻 Retro Inspired | 🎞️ Classic Quality | ❤️ Memory Lane
+
+Relive the magic.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Local Hero",
+        "content": """🏘️ {store_name} - PROUDLY LOCAL
+================================================================================
+
+Supporting Our Community
+--------------------------------------------------------------------------------
+
+{store_name} is rooted in our local community. We source locally, employ locally, and give back locally.
+
+Local Impact
+--------------------------------------------------------------------------------
+
+🏠 Community-Owned | 🤝 Local Partnerships | 💚 Neighborhood Pride
+
+Shop local, impact local.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Creative Collective",
+        "content": """🎨 {store_name} - WHERE CREATIVITY LIVES
+================================================================================
+
+Celebrating Creative Expression
+--------------------------------------------------------------------------------
+
+{store_name} is a platform for artists, designers, and creative minds. We showcase products that inspire and delight.
+
+Creative Community
+--------------------------------------------------------------------------------
+
+🖌️ Artist Collaborations | 🎭 Unique Designs | ✨ Creative Freedom
+
+Express yourself.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Problem Solver",
+        "content": """{store_name} - SOLUTIONS, NOT JUST PRODUCTS
+================================================================================
+
+Solving Real Problems
+--------------------------------------------------------------------------------
+
+We don't sell products for the sake of it. Every item at {store_name} solves a specific problem or fills a genuine need.
+
+Solution-Focused Approach
+--------------------------------------------------------------------------------
+
+🔧 Practical Solutions | 💡 Smart Design | ✅ Real Results
+
+Find your solution here.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Lifestyle Brand",
+        "content": """✨ {store_name} - LIVE YOUR BEST LIFE
+================================================================================
+
+More Than Products, It's a Lifestyle
+--------------------------------------------------------------------------------
+
+{store_name} isn't just about what you buy—it's about how you live. We curate products that enhance your lifestyle.
+
+The {store_name} Lifestyle
+--------------------------------------------------------------------------------
+
+🌟 Aspirational Living | 🎯 Curated Collections | 💫 Elevated Everyday
+
+Upgrade your lifestyle.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Tech Enthusiast",
+        "content": """💻 {store_name} - FOR THE TECH-SAVVY
+================================================================================
+
+Gadgets, Gear, and Innovation
+--------------------------------------------------------------------------------
+
+{store_name} is your destination for the latest tech and innovative gadgets. We're as obsessed with technology as you are.
+
+Tech-Forward Selection
+--------------------------------------------------------------------------------
+
+🤖 Latest Tech | ⚙️ Smart Gadgets | 🔌 Innovation Hub
+
+Stay ahead of the curve.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Comfort Specialist",
+        "content": """☁️ {store_name} - COMFORT IS EVERYTHING
+================================================================================
+
+Your Comfort, Our Priority
+--------------------------------------------------------------------------------
+
+Life's too short to be uncomfortable. {store_name} specializes in products that make your life cozier, easier, and more comfortable.
+
+Comfort-First Philosophy
+--------------------------------------------------------------------------------
+
+🛋️ Ultimate Comfort | 😌 Stress-Free Living | ☁️ Cozy Vibes
+
+Get comfortable.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Gift Expert",
+        "content": """🎁 {store_name} - THE PERFECT GIFT AWAITS
+================================================================================
+
+Gifting Made Easy
+--------------------------------------------------------------------------------
+
+Finding the perfect gift shouldn't be stressful. {store_name} curates thoughtful gifts for every occasion and every person.
+
+Gift-Giving Simplified
+--------------------------------------------------------------------------------
+
+🎀 Curated Selections | 💝 Thoughtful Choices | 🎉 Every Occasion
+
+Make someone's day.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Quality Inspector",
+        "content": """✅ {store_name} - QUALITY GUARANTEED
+================================================================================
+
+Obsessed with Quality
+--------------------------------------------------------------------------------
+
+At {store_name}, every product undergoes rigorous quality inspection. We're perfectionists, so you don't have to be.
+
+Quality Control Process
+--------------------------------------------------------------------------------
+
+🔍 Thorough Inspection | ✅ Strict Standards | 🏆 Excellence Only
+
+Quality you can trust.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Seasonal Specialist",
+        "content": """🍂 {store_name} - CELEBRATING EVERY SEASON
+================================================================================
+
+Seasonal Selections
+--------------------------------------------------------------------------------
+
+{store_name} brings you the best products for every season. From summer essentials to winter warmers, we've got you covered year-round.
+
+Season by Season
+--------------------------------------------------------------------------------
+
+🌸 Spring Fresh | ☀️ Summer Ready | 🍁 Fall Favorites | ❄️ Winter Warmth
+
+Embrace every season.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Budget Optimizer",
+        "content": """{store_name} - STRETCH YOUR DOLLAR
+================================================================================
+
+Maximum Value, Minimum Spend
+--------------------------------------------------------------------------------
+
+{store_name} helps you get more for less. We're experts at finding quality products at prices that won't hurt your wallet.
+
+Smart Shopping Strategies
+--------------------------------------------------------------------------------
+
+💵 Best Deals | 🎯 Value Picks | 💰 Budget-Friendly
+
+Shop smarter, save more.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Exclusive Access",
+        "content": """👑 {store_name} - MEMBERS ONLY
+================================================================================
+
+Exclusive Products, Exclusive Community
+--------------------------------------------------------------------------------
+
+{store_name} offers access to products you won't find anywhere else. Join our exclusive community of discerning shoppers.
+
+VIP Benefits
+--------------------------------------------------------------------------------
+
+🌟 Exclusive Products | 🎁 Member Perks | 👑 VIP Treatment
+
+Join the elite.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Fast & Efficient",
+        "content": """⚡ {store_name} - SPEED IS OUR SPECIALTY
+================================================================================
+
+Quick, Easy, Efficient
+--------------------------------------------------------------------------------
+
+We know your time is valuable. {store_name} is optimized for speed—fast browsing, quick checkout, rapid delivery.
+
+Efficiency Promise
+--------------------------------------------------------------------------------
+
+🚀 Lightning Fast | ⏱️ Time-Saving | ✅ Hassle-Free
+
+Shop in seconds.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Personalization Pro",
+        "content": """{store_name} - MADE JUST FOR YOU
+================================================================================
+
+Personalized Shopping Experience
+--------------------------------------------------------------------------------
+
+One size doesn't fit all. {store_name} offers personalized recommendations and customizable products tailored to your unique needs.
+
+Your Personal Shopper
+--------------------------------------------------------------------------------
+
+🎯 Custom Recommendations | ✨ Personalized Service | 💝 Made for You
+
+It's all about you.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Safety First",
+        "content": """🛡️ {store_name} - YOUR SAFETY MATTERS
+================================================================================
+
+Safe, Secure, Trustworthy
+--------------------------------------------------------------------------------
+
+{store_name} prioritizes your safety in every aspect—from secure transactions to safe products to privacy protection.
+
+Safety Standards
+--------------------------------------------------------------------------------
+
+🔒 Secure Shopping | ✅ Safety Tested | 🛡️ Privacy Protected
+
+Shop with confidence.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Customer Obsessed",
+        "content": """❤️ {store_name} - YOU'RE OUR EVERYTHING
+================================================================================
+
+Customer-Centric to the Core
+--------------------------------------------------------------------------------
+
+At {store_name}, you're not just a customer—you're the reason we exist. Every decision we make starts with one question: "Is this good for our customers?"
+
+Our Customer Promise
+--------------------------------------------------------------------------------
+
+💯 Your Satisfaction | 🎯 Your Needs First | ❤️ Your Happiness
+
+You come first, always.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Transparent Truth",
+        "content": """{store_name} - RADICAL TRANSPARENCY
+================================================================================
+
+Honest, Open, Transparent
+--------------------------------------------------------------------------------
+
+No hidden fees. No fine print. No surprises. {store_name} believes in complete transparency in everything we do.
+
+Our Transparency Pledge
+--------------------------------------------------------------------------------
+
+📖 Open Book | 💬 Honest Communication | ✅ No Surprises
+
+What you see is what you get.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Beginner Friendly",
+        "content": """{store_name} - PERFECT FOR BEGINNERS
+================================================================================
+
+Start Your Journey Here
+--------------------------------------------------------------------------------
+
+New to this? Perfect! {store_name} specializes in helping beginners get started with confidence. We make complex simple.
+
+Beginner-Friendly Approach
+--------------------------------------------------------------------------------
+
+📚 Easy Guides | 🎓 Learning Resources | 🤝 Patient Support
+
+Everyone starts somewhere.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Expert Authority",
+        "content": """{store_name} - TRUSTED BY EXPERTS
+================================================================================
+
+Industry-Leading Expertise
+--------------------------------------------------------------------------------
+
+{store_name} is recognized by industry experts as the authority in our field. We set the standards others follow.
+
+Expert Credentials
+--------------------------------------------------------------------------------
+
+🏆 Industry Recognition | 📊 Proven Track Record | 🎯 Expert-Approved
+
+Trust the experts.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Variety Vault",
+        "content": """{store_name} - ENDLESS VARIETY
+================================================================================
+
+Something for Everyone
+--------------------------------------------------------------------------------
+
+With {store_name}'s vast selection, you'll always find what you're looking for—and discover things you didn't know you needed.
+
+Diverse Selection
+--------------------------------------------------------------------------------
+
+🎨 Huge Variety | 🌈 All Styles | 🎯 Every Need
+
+Explore endless possibilities.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Reward Enthusiast",
+        "content": """🎁 {store_name} - SHOP & EARN REWARDS
+================================================================================
+
+Every Purchase Pays Back
+--------------------------------------------------------------------------------
+
+At {store_name}, loyalty pays. Earn rewards, unlock perks, and enjoy exclusive benefits with every purchase.
+
+Rewards Program
+--------------------------------------------------------------------------------
+
+⭐ Points on Every Purchase | 🎁 Exclusive Perks | 💝 VIP Benefits
+
+Get rewarded for shopping.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Mobile-First Maven",
+        "content": """📱 {store_name} - SHOP ON THE GO
+================================================================================
+
+Optimized for Mobile
+--------------------------------------------------------------------------------
+
+{store_name} is built for how you actually shop—on your phone, on the go, whenever inspiration strikes.
+
+Mobile Excellence
+--------------------------------------------------------------------------------
+
+📱 Mobile-Optimized | ⚡ Fast Loading | 👆 Easy Navigation
+
+Shop anywhere, anytime.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Social Butterfly",
+        "content": """💬 {store_name} - JOIN THE CONVERSATION
+================================================================================
+
+More Than Shopping, It's Social
+--------------------------------------------------------------------------------
+
+{store_name} is where shopping meets social. Share finds, get inspired, and connect with fellow shoppers.
+
+Social Shopping
+--------------------------------------------------------------------------------
+
+📸 Share Your Finds | 💬 Community Chat | 🌟 Get Inspired
+
+Shop social.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Green Guardian",
+        "content": """🌿 {store_name} - PLANET-POSITIVE SHOPPING
+================================================================================
+
+Every Purchase Plants a Tree
+--------------------------------------------------------------------------------
+
+{store_name} is committed to environmental stewardship. We offset our carbon footprint and actively contribute to reforestation.
+
+Environmental Commitment
+--------------------------------------------------------------------------------
+
+🌳 Carbon Neutral | ♻️ Sustainable Practices | 🌍 Planet-Positive
+
+Shop for a better planet.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Subscription Savvy",
+        "content": """{store_name} - SUBSCRIBE & SAVE
+================================================================================
+
+Never Run Out Again
+--------------------------------------------------------------------------------
+
+{store_name} makes life easier with convenient subscriptions. Get your essentials delivered automatically and save money.
+
+Subscription Benefits
+--------------------------------------------------------------------------------
+
+💰 Save on Every Order | 📦 Auto-Delivery | ⏰ Never Forget
+
+Set it and forget it.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Bundle Master",
+        "content": """{store_name} - BETTER TOGETHER
+================================================================================
+
+Curated Bundles, Better Value
+--------------------------------------------------------------------------------
+
+{store_name} creates thoughtful product bundles that save you money and give you everything you need in one click.
+
+Bundle Benefits
+--------------------------------------------------------------------------------
+
+💰 Bundle Savings | 🎁 Perfectly Paired | ✅ Complete Solutions
+
+Get more, spend less.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Review Champion",
+        "content": """⭐ {store_name} - RATED 5 STARS
+================================================================================
+
+Our Customers Love Us
+--------------------------------------------------------------------------------
+
+Don't just take our word for it. {store_name} has thousands of 5-star reviews from happy customers just like you.
+
+Customer Reviews
+--------------------------------------------------------------------------------
+
+⭐⭐⭐⭐⭐ 5-Star Rated | 💬 Real Reviews | 🏆 Customer Approved
+
+See what others are saying.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Flash Deal Hunter",
+        "content": """⚡ {store_name} - DAILY DEALS & FLASH SALES
+================================================================================
+
+Don't Miss Out
+--------------------------------------------------------------------------------
+
+{store_name} offers exciting flash sales and daily deals. Check back often for limited-time offers on your favorite products.
+
+Deal Alerts
+--------------------------------------------------------------------------------
+
+⏰ Flash Sales | 🎯 Daily Deals | 💰 Limited-Time Offers
+
+Catch them while you can.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Curiosity Cultivator",
+        "content": """🧐 {store_name} - FEED YOUR CURIOSITY
+================================================================================
+
+Discover Something New
+--------------------------------------------------------------------------------
+
+At {store_name}, we believe in the joy of discovery. We curate unique, intriguing products that spark curiosity and inspire wonder.
+
+Explore & Learn
+--------------------------------------------------------------------------------
+
+✨ Unique Finds | 💡 Inspiring Products | 🌍 World of Discovery
+
+Unleash your inner explorer.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Efficiency Expert",
+        "content": """⏱️ {store_name} - MAXIMIZE YOUR TIME
+================================================================================
+
+Smart Shopping, Simplified Living
+--------------------------------------------------------------------------------
+
+{store_name} is designed to save you time and effort. We offer efficient solutions and products that streamline your life.
+
+Time-Saving Solutions
+--------------------------------------------------------------------------------
+
+🚀 Quick Solutions | ✅ Hassle-Free | 🎯 Smart Choices
+
+Reclaim your time.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Empowerment Engine",
+        "content": """💪 {store_name} - EMPOWERING YOUR CHOICES
+================================================================================
+
+Shop with Confidence & Purpose
+--------------------------------------------------------------------------------
+
+{store_name} empowers you to make informed decisions. We provide the tools, knowledge, and products to help you thrive.
+
+Our Empowerment Pledge
+--------------------------------------------------------------------------------
+
+💡 Informed Choices | 🚀 Personal Growth | 🌟 Confident Living
+
+Be your best self.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Artisan Advocate",
+        "content": """🎨 {store_name} - CELEBRATING ARTISANSHIP
+================================================================================
+
+Handcrafted Excellence
+--------------------------------------------------------------------------------
+
+{store_name} is a proud advocate for artisans and their craft. We bring you products made with skill, dedication, and passion.
+
+Support True Craft
+--------------------------------------------------------------------------------
+
+🖌️ Handcrafted Quality | 🌟 Unique Creations | 🤝 Ethical Sourcing
+
+Invest in artistry.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Future Forward",
+        "content": """🔮 {store_name} - SHAPING TOMORROW, TODAY
+================================================================================
+
+Innovating for What's Next
+--------------------------------------------------------------------------------
+
+{store_name} is constantly looking ahead, bringing you products and ideas that define the future of commerce and lifestyle.
+
+Our Vision
+--------------------------------------------------------------------------------
+
+✨ Next-Gen Products | 🚀 Forward Thinking | 🌐 Future-Proof
+
+Step into tomorrow.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Ethical Explorer",
+        "content": """🌱 {store_name} - CONSCIOUS CHOICES
+================================================================================
+
+Shop with a Conscience
+--------------------------------------------------------------------------------
+
+{store_name} is dedicated to ethical sourcing and responsible consumption. Every product has a story you can feel good about.
+
+Our Ethical Promise
+--------------------------------------------------------------------------------
+
+🤝 Fair Trade | 💚 Sustainable Practices | 🐾 Cruelty-Free
+
+Make a positive impact.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Joy Spreader",
+        "content": """😊 {store_name} - SPREADING JOY, ONE ORDER AT A TIME
+================================================================================
+
+Bringing Smiles to Your Doorstep
+--------------------------------------------------------------------------------
+
+At {store_name}, our mission is simple: to bring a little more joy into your life with every package you receive.
+
+Our Joyful Approach
+--------------------------------------------------------------------------------
+
+✨ Delightful Products | 🎁 Thoughtful Packaging | 😄 Happy Experiences
+
+Find your happy.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Heritage Keeper",
+        "content": """📜 {store_name} - PRESERVING TRADITION
+================================================================================
+
+Honoring the Past, Crafting the Future
+--------------------------------------------------------------------------------
+
+{store_name} celebrates timeless traditions and heritage crafts. We offer products with rich histories and enduring value.
+
+Our Legacy
+--------------------------------------------------------------------------------
+
+🕰️ Timeless Designs | 🌍 Cultural Roots | 💎 Enduring Quality
+
+Connect with history.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Simplicity Seeker",
+        "content": """⚪ {store_name} - THE BEAUTY OF SIMPLICITY
+================================================================================
+
+Uncomplicated Living
+--------------------------------------------------------------------------------
+
+{store_name} believes in the power of simplicity. We offer elegant, functional products that enhance your life without complexity.
+
+Simple by Design
+--------------------------------------------------------------------------------
+
+Minimalist Aesthetic | ✨ Functional Elegance | 🧘 Peaceful Living
+
+Embrace the simple life.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Dream Weaver",
+        "content": """✨ {store_name} - WHERE DREAMS TAKE FLIGHT
+================================================================================
+
+Inspiring Your Imagination
+--------------------------------------------------------------------------------
+
+{store_name} is more than a store; it's a place where ideas flourish and dreams find their form. Discover products that inspire.
+
+Ignite Your Imagination
+--------------------------------------------------------------------------------
+
+💭 Creative Inspiration | 🌟 Aspirational Products | 🚀 Limitless Possibilities
+
+Dream big.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Urban Explorer",
+        "content": """🏙️ {store_name} - YOUR URBAN ESSENTIALS
+================================================================================
+
+Navigate the City with Style
+--------------------------------------------------------------------------------
+
+{store_name} curates products for the modern urbanite. Gear up for city adventures, work, and everything in between.
+
+City-Ready Collection
+--------------------------------------------------------------------------------
+
+🚶 Urban Mobility | 💼 Smart Solutions | 🌆 City Style
+
+Conquer the concrete jungle.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Home Haven",
+        "content": """🏡 {store_name} - CREATE YOUR SANCTUARY
+================================================================================
+
+Making Your House a Home
+--------------------------------------------------------------------------------
+
+{store_name} offers everything you need to transform your living space into a personal haven of comfort and style.
+
+Home Sweet Home
+--------------------------------------------------------------------------------
+
+🛋️ Cozy Comfort | 🌿 Serene Spaces | 💖 Personal Touches
+
+Love where you live.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Pet Pal",
+        "content": """🐾 {store_name} - FOR YOUR FURRY FRIENDS
+================================================================================
+
+Happy Pets, Happy Life
+--------------------------------------------------------------------------------
+
+At {store_name}, we're as passionate about pets as you are. We offer high-quality products to keep your companions healthy and happy.
+
+Pet-Approved Products
+--------------------------------------------------------------------------------
+
+🐶 Cat & Dog Essentials | 🐱 Playful & Practical | ❤️ Pet Wellness
+
+Spoil your best friend.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Parent Partner",
+        "content": """👨‍👩‍👧‍👦 {store_name} - SUPPORTING PARENTS
+================================================================================
+
+Making Parenthood Easier
+--------------------------------------------------------------------------------
+
+{store_name} is here to support parents through every stage. We offer practical, safe, and fun products for your little ones.
+
+Parenting Made Simple
+--------------------------------------------------------------------------------
+
+👶 Baby & Kids Gear | ✅ Safety First | 🧸 Fun & Educational
+
+You've got this, parents!
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Student Success",
+        "content": """🎓 {store_name} - YOUR STUDY ESSENTIALS
+================================================================================
+
+Equipping Minds for Success
+--------------------------------------------------------------------------------
+
+{store_name} provides students with the tools they need to excel. From study aids to dorm decor, we've got your academic journey covered.
+
+Student-Focused Solutions
+--------------------------------------------------------------------------------
+
+📚 Study Tools | 💡 Learning Aids | 🎒 Campus Life
+
+Achieve your potential.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Fitness Fanatic",
+        "content": """🏋️ {store_name} - POWER YOUR WORKOUT
+================================================================================
+
+Achieve Your Fitness Goals
+--------------------------------------------------------------------------------
+
+{store_name} is your partner in health and fitness. We offer top-tier gear and supplements to help you crush your goals.
+
+Train Hard, Live Strong
+--------------------------------------------------------------------------------
+
+💪 Performance Gear | 🍎 Nutrition Support | 🏃 Active Lifestyle
+
+Unleash your strength.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Beauty Boss",
+        "content": """💄 {store_name} - UNLEASH YOUR BEAUTY
+================================================================================
+
+Radiate Confidence
+--------------------------------------------------------------------------------
+
+{store_name} believes true beauty comes from within, but a little help never hurts! Discover products that enhance your natural glow.
+
+Your Beauty Journey
+--------------------------------------------------------------------------------
+
+✨ Skincare & Makeup | 💖 Self-Care Essentials | 🌟 Inner Radiance
+
+Shine bright.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Gamer's Paradise",
+        "content": """🎮 {store_name} - LEVEL UP YOUR GAME
+================================================================================
+
+For Gamers, By Gamers
+--------------------------------------------------------------------------------
+
+{store_name} is the ultimate destination for gamers. Find the latest gear, accessories, and collectibles to enhance your play.
+
+Game On!
+--------------------------------------------------------------------------------
+
+🕹️ High-Performance Gear | 👾 Collectibles | 🏆 Victory Awaits
+
+Dominate the game.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Bookworm's Nook",
+        "content": """📚 {store_name} - YOUR NEXT GREAT READ
+================================================================================
+
+Escape into Stories
+--------------------------------------------------------------------------------
+
+{store_name} is a sanctuary for book lovers. Discover new worlds, timeless classics, and everything in between.
+
+Literary Adventures
+--------------------------------------------------------------------------------
+
+📖 Bestsellers & Classics | 🖋️ Author Spotlights | ☕ Cozy Reading
+
+Turn the page.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Music Maestro",
+        "content": """🎶 {store_name} - HARMONY IN EVERY NOTE
+================================================================================
+
+Your Soundtrack to Life
+--------------------------------------------------------------------------------
+
+{store_name} celebrates the power of music. Find instruments, audio gear, and accessories to create your perfect sound.
+
+Tune In
+--------------------------------------------------------------------------------
+
+🎸 Instruments & Gear | 🎧 High-Fidelity Audio | 🎤 Express Yourself
+
+Let the music play.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Foodie's Delight",
+        "content": """🍽️ {store_name} - A FEAST FOR THE SENSES
+================================================================================
+
+Culinary Adventures Await
+--------------------------------------------------------------------------------
+
+{store_name} is a paradise for food lovers. Discover gourmet ingredients, kitchen gadgets, and delicious treats.
+
+Taste the Difference
+--------------------------------------------------------------------------------
+
+🌶️ Gourmet Goods | 🔪 Kitchen Essentials | 🥂 Epicurean Delights
+
+Savor every bite.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Travel Companion",
+        "content": """✈️ {store_name} - YOUR JOURNEY STARTS HERE
+================================================================================
+
+Explore the World with Confidence
+--------------------------------------------------------------------------------
+
+{store_name} provides essential gear for every adventurer. Pack smart, travel far, and make unforgettable memories.
+
+Ready for Adventure
+--------------------------------------------------------------------------------
+
+🗺️ Travel Essentials | 🎒 Durable Gear | 🌍 Explore More
+
+Wanderlust approved.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Gardener's Oasis",
+        "content": """🌱 {store_name} - GROW YOUR GREEN THUMB
+================================================================================
+
+Cultivate Your Own Paradise
+--------------------------------------------------------------------------------
+
+{store_name} is dedicated to helping your garden flourish. Find tools, seeds, and decor to create your perfect outdoor space.
+
+Green Living
+--------------------------------------------------------------------------------
+
+🌻 Gardening Tools | 🌿 Plant Care | 🏡 Outdoor Decor
+
+Blossom with us.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "DIY Dynamo",
+        "content": """🛠️ {store_name} - BUILD YOUR DREAMS
+================================================================================
+
+Empowering Your Projects
+--------------------------------------------------------------------------------
+
+{store_name} is your go-to for all things DIY. From home improvement to creative crafts, we supply the tools and inspiration.
+
+Get Creative
+--------------------------------------------------------------------------------
+
+🔨 Tools & Supplies | 💡 Project Ideas | ✨ Craft Your Vision
+
+Make it yourself.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Art Collector",
+        "content": """🖼️ {store_name} - CURATING BEAUTY
+================================================================================
+
+Discover Your Next Masterpiece
+--------------------------------------------------------------------------------
+
+{store_name} brings art into your everyday. Explore unique pieces, prints, and artistic decor that speak to your soul.
+
+Art for Everyone
+--------------------------------------------------------------------------------
+
+🎨 Original Art | 🖼️ Unique Prints | ✨ Aesthetic Decor
+
+Adorn your world.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Science Seeker",
+        "content": """🔬 {store_name} - EXPLORE THE UNKNOWN
+================================================================================
+
+Fueling Scientific Curiosity
+--------------------------------------------------------------------------------
+
+{store_name} is for the curious minds and future innovators. Discover educational kits, gadgets, and scientific wonders.
+
+Unravel the Mysteries
+--------------------------------------------------------------------------------
+
+🧪 STEM Kits | 🔭 Educational Toys | 💡 Discovery Awaits
+
+Question everything.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Wellness Warrior",
+        "content": """🧘 {store_name} - HOLISTIC WELLBEING
+================================================================================
+
+Mind, Body, Spirit Harmony
+--------------------------------------------------------------------------------
+
+{store_name} supports your journey to holistic wellness. Find products that nourish your mind, body, and spirit.
+
+Balance Your Life
+--------------------------------------------------------------------------------
+
+🌿 Natural Remedies | 🧘 Mindfulness Tools | 💖 Self-Care Rituals
+
+Find your center.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Outdoor Enthusiast",
+        "content": """🌲 {store_name} - EMBRACE THE WILD
+================================================================================
+
+Your Gateway to Nature
+--------------------------------------------------------------------------------
+
+{store_name} equips you for every outdoor adventure. From hiking trails to camping trips, we've got your back.
+
+Adventure Awaits
+--------------------------------------------------------------------------------
+
+🏕️ Camping Gear | ⛰️ Hiking Essentials | 🛶 Water Sports
+
+Explore beyond limits.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Fashion Forward",
+        "content": """👗 {store_name} - YOUR STYLE STATEMENT
+================================================================================
+
+Define Your Look
+--------------------------------------------------------------------------------
+
+{store_name} brings you the latest trends and timeless pieces to express your unique style. Fashion is personal.
+
+Dress to Impress
+--------------------------------------------------------------------------------
+
+👠 Trendy Apparel | 👜 Chic Accessories | ✨ Personal Style
+
+Own your runway.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Collector's Corner",
+        "content": """💎 {store_name} - TREASURES FOR THE CURIOUS
+================================================================================
+
+Hunt for the Unique
+--------------------------------------------------------------------------------
+
+{store_name} is a haven for collectors. Discover rare finds, limited editions, and unique items that complete your collection.
+
+The Thrill of the Find
+--------------------------------------------------------------------------------
+
+✨ Rare Collectibles | 🎁 Limited Editions | 🔍 Unique Finds
+
+Expand your collection.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Party Planner",
+        "content": """🎉 {store_name} - CELEBRATE EVERYTHING
+================================================================================
+
+Make Every Occasion Special
+--------------------------------------------------------------------------------
+
+{store_name} helps you throw the perfect party. From decorations to gifts, we've got everything you need to celebrate in style.
+
+Party On!
+--------------------------------------------------------------------------------
+
+🎈 Festive Decor | 🎁 Perfect Gifts | 🥳 Event Essentials
+
+Let the good times roll.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Mindful Living",
+        "content": """🌸 {store_name} - LIVE WITH INTENTION
+================================================================================
+
+Cultivating Peace & Presence
+--------------------------------------------------------------------------------
+
+{store_name} offers products that support a mindful lifestyle. Find tools for meditation, relaxation, and conscious living.
+
+Embrace Serenity
+--------------------------------------------------------------------------------
+
+🧘 Meditation Aids | 🌿 Natural Wellness | 💖 Inner Peace
+
+Live mindfully.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Eco-Conscious Creator",
+        "content": """🌎 {store_name} - CRAFTING A BETTER WORLD
+================================================================================
+
+Sustainable Solutions for Creative Minds
+--------------------------------------------------------------------------------
+
+{store_name} empowers creators to make a positive impact. Discover eco-friendly materials and tools for sustainable crafting.
+
+Create Responsibly
+--------------------------------------------------------------------------------
+
+♻️ Recycled Materials | 🌱 Sustainable Supplies | 🎨 Green Art
+
+Innovate with integrity.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Digital Nomad",
+        "content": """💻 {store_name} - WORK FROM ANYWHERE
+================================================================================
+
+Your Mobile Office Essentials
+--------------------------------------------------------------------------------
+
+{store_name} equips digital nomads for productivity on the go. Find portable tech, ergonomic solutions, and travel-friendly gear.
+
+Freedom to Work
+--------------------------------------------------------------------------------
+
+🚀 Portable Tech | 🌐 Connectivity Solutions | 🎒 Travel-Ready
+
+Your office is wherever you are.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Self-Care Sanctuary",
+        "content": """🛀 {store_name} - INDULGE IN SELF-CARE
+================================================================================
+
+Prioritize Your Wellbeing
+--------------------------------------------------------------------------------
+
+{store_name} is your destination for all things self-care. Create your personal sanctuary with products that soothe and rejuvenate.
+
+Rituals of Relaxation
+--------------------------------------------------------------------------------
+
+🛁 Bath & Body | 🕯️ Aromatherapy | 💖 Pamper Yourself
+
+You deserve it.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Storyteller's Source",
+        "content": """📖 {store_name} - TELL YOUR STORY
+================================================================================
+
+Inspiring Narratives, Unique Products
+--------------------------------------------------------------------------------
+
+{store_name} believes every product has a story, and every customer has one to tell. Find items that help you express yourself.
+
+Craft Your Narrative
+--------------------------------------------------------------------------------
+
+✍️ Creative Tools | 🎭 Expressive Art | 🌟 Personal Expression
+
+Your story, beautifully told.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Wellness Wanderer",
+        "content": """🌍 {store_name} - GLOBAL WELLNESS JOURNEY
+================================================================================
+
+Discover Health from Around the World
+--------------------------------------------------------------------------------
+
+{store_name} curates wellness products inspired by global traditions and natural remedies. Explore ancient secrets for modern health.
+
+World of Wellbeing
+--------------------------------------------------------------------------------
+
+🌿 Global Remedies | 🧘 Holistic Practices | ✨ Cultural Wellness
+
+Your passport to health.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Playful Pioneer",
+        "content": """🎉 {store_name} - EMBRACE THE FUN
+================================================================================
+
+Innovation with a Smile
+--------------------------------------------------------------------------------
+
+{store_name} brings a playful spirit to commerce. We offer innovative products that are not just smart, but also spark joy.
+
+Serious Fun
+--------------------------------------------------------------------------------
+
+🚀 Playful Tech | 😄 Joyful Discoveries | 💡 Creative Solutions
+
+Where fun meets function.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
+    }, {
+        "name": "Conscious Consumer",
+        "content": """💚 {store_name} - SHOP WITH IMPACT
+================================================================================
+
+Every Purchase Makes a Difference
+--------------------------------------------------------------------------------
+
+{store_name} is for the conscious consumer. We partner with brands committed to ethical production, fair labor, and environmental stewardship.
+
+Your Impact Matters
+--------------------------------------------------------------------------------
+
+🤝 Ethical Brands | 🌱 Sustainable Products | 🌍 Positive Change
+
+Shop for a better world.
+
+📧 {support_email}
+{social_links}
+
+— {store_name}"""
     }]
 
     SHIPPING_POLICY_TEMPLATES = [{
@@ -1129,12 +2794,35 @@ With appreciation,
 The {store_name} Team"""
     }]
 
-    @staticmethod
-    def get_random_about_us_template(store_name: str,
+    @classmethod
+    def _get_next_about_us_index(cls):
+        """Get next About Us template index using shuffle-based rotation"""
+        # Initialize indices on first call
+        if cls._about_us_indices is None:
+            cls._about_us_indices = list(range(len(cls.ABOUT_US_TEMPLATES)))
+            random.shuffle(cls._about_us_indices)
+            cls._about_us_current_index = 0
+        
+        # Check if we've completed a full cycle
+        if cls._about_us_current_index >= len(cls._about_us_indices):
+            # Reshuffle for next cycle
+            random.shuffle(cls._about_us_indices)
+            cls._about_us_current_index = 0
+        
+        # Get current index and increment
+        index = cls._about_us_indices[cls._about_us_current_index]
+        cls._about_us_current_index += 1
+        
+        return index
+    
+    @classmethod
+    def get_random_about_us_template(cls, store_name: str,
                                      support_email: str,
                                      social_links: str = "") -> dict:
-        """Get a random About Us template"""
-        template = random.choice(PageTemplateGenerator.ABOUT_US_TEMPLATES)
+        """Get a non-repeating About Us template using shuffle-based rotation"""
+        # Get next template using rotation
+        index = cls._get_next_about_us_index()
+        template = cls.ABOUT_US_TEMPLATES[index]
 
         # Format social links - use provided links or placeholder
         if social_links and social_links.strip():
@@ -1148,13 +2836,35 @@ The {store_name} Team"""
 
         return {"template_name": template["name"], "content": content}
 
-    @staticmethod
-    def get_random_shipping_policy_template(store_name: str,
+    @classmethod
+    def _get_next_shipping_policy_index(cls):
+        """Get next Shipping Policy template index using shuffle-based rotation"""
+        # Initialize indices on first call
+        if cls._shipping_policy_indices is None:
+            cls._shipping_policy_indices = list(range(len(cls.SHIPPING_POLICY_TEMPLATES)))
+            random.shuffle(cls._shipping_policy_indices)
+            cls._shipping_policy_current_index = 0
+        
+        # Check if we've completed a full cycle
+        if cls._shipping_policy_current_index >= len(cls._shipping_policy_indices):
+            # Reshuffle for next cycle
+            random.shuffle(cls._shipping_policy_indices)
+            cls._shipping_policy_current_index = 0
+        
+        # Get current index and increment
+        index = cls._shipping_policy_indices[cls._shipping_policy_current_index]
+        cls._shipping_policy_current_index += 1
+        
+        return index
+    
+    @classmethod
+    def get_random_shipping_policy_template(cls, store_name: str,
                                             support_email: str,
                                             social_links: str = "") -> dict:
-        """Get a random Shipping Policy template"""
-        template = random.choice(
-            PageTemplateGenerator.SHIPPING_POLICY_TEMPLATES)
+        """Get a non-repeating Shipping Policy template using shuffle-based rotation"""
+        # Get next template using rotation
+        index = cls._get_next_shipping_policy_index()
+        template = cls.SHIPPING_POLICY_TEMPLATES[index]
 
         # Format social links - use provided links or placeholder
         if social_links and social_links.strip():
@@ -1168,14 +2878,14 @@ The {store_name} Team"""
 
         return {"template_name": template["name"], "content": content}
 
-    @staticmethod
-    def generate_both_templates(store_name: str,
+    @classmethod
+    def generate_both_templates(cls, store_name: str,
                                 support_email: str,
                                 social_links: str = "") -> dict:
-        """Generate both templates with random selection"""
-        about_us = PageTemplateGenerator.get_random_about_us_template(
+        """Generate both templates with non-repeating rotation selection"""
+        about_us = cls.get_random_about_us_template(
             store_name, support_email, social_links)
-        shipping = PageTemplateGenerator.get_random_shipping_policy_template(
+        shipping = cls.get_random_shipping_policy_template(
             store_name, support_email, social_links)
 
         return {
