@@ -835,7 +835,7 @@ def main():
             """)
 
         # Input section
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             store_name = st.text_input(
@@ -853,6 +853,16 @@ def main():
                 help="Enter your customer support email"
                 if lang == 'en' else "Nhập email hỗ trợ khách hàng",
                 key="template_support_email")
+
+        with col3:
+            niche_name = st.text_input(
+                "🏷️ " + ("Niche/Industry" if lang == 'en' else "Ngách Sản Phẩm"),
+                value="Women's Clothing",
+                placeholder="e.g. Women's Clothing"
+                if lang == 'en' else "VD: Thời Trang Nữ",
+                help="Enter your niche (e.g. Women's Clothing) for specialized content"
+                if lang == 'en' else "Nhập ngách của bạn (VD: Thời Trang Nữ) để tạo nội dung chuyên sâu",
+                key="template_niche_name")
 
         # Auto-generate social media username from store name
         social_username = ""
@@ -905,7 +915,7 @@ Twitter: https://twitter.com/storecutban"""
                         # Generate templates
                         st.session_state.generated_templates = PageTemplateGenerator.generate_both_templates(
                             store_name.strip(), support_email.strip(),
-                            final_social_links)
+                            final_social_links, niche_name.strip())
                 else:
                     st.warning("⚠️ " + (
                         "Please fill in both Store Name and Support Email"
