@@ -962,10 +962,34 @@ Twitter: https://twitter.com/storecutban"""
                 f"\n- Legal Notice: **{templates['legal_notice_template']}**"
             )
 
+            # Quick Copy Actions
+            st.markdown("### ⚡ " + ("Quick Copy HTML" if lang == 'en' else "Copy Nhanh HTML"))
+            cq1, cq2, cq3 = st.columns(3)
+            with cq1:
+                copy_html_btn1 = create_copy_html_button(
+                    templates['about_us'],
+                    button_text="📋 " + ("Copy About Us" if lang == 'en' else "Copy Giới Thiệu"),
+                    button_id="quick_copy_about_us"
+                )
+                components.html(copy_html_btn1, height=60)
+            with cq2:
+                copy_html_btn2 = create_copy_html_button(
+                    templates['shipping_policy'],
+                    button_text="📋 " + ("Copy Shipping" if lang == 'en' else "Copy Vận Chuyển"),
+                    button_id="quick_copy_shipping"
+                )
+                components.html(copy_html_btn2, height=60)
+            with cq3:
+                copy_html_btn3 = create_copy_html_button(
+                    templates['legal_notice'],
+                    button_text="📋 " + ("Copy Legal Notice" if lang == 'en' else "Copy Legal Notice"),
+                    button_id="quick_copy_legal_notice"
+                )
+                components.html(copy_html_btn3, height=60)
+
             # About Us Page
-            st.markdown("### 📖 " + (
-                "About Us Page" if lang == 'en' else "Trang Giới Thiệu"))
-            about_us_container = st.container(border=True)
+            about_us_title = "📖 " + ("About Us Page Preview" if lang == 'en' else "Xem trước: Trang Giới Thiệu")
+            about_us_container = st.expander(about_us_title, expanded=False)
             with about_us_container:
                 # Display as markdown with clickable links
                 st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
@@ -1006,9 +1030,8 @@ Twitter: https://twitter.com/storecutban"""
             st.markdown("---")
 
             # Shipping Policy Page
-            st.markdown("### 🚚 " + ("Shipping Policy Page" if lang ==
-                                    'en' else "Trang Chính Sách Vận Chuyển"))
-            shipping_container = st.container(border=True)
+            shipping_title = "🚚 " + ("Shipping Policy Page Preview" if lang == 'en' else "Xem trước: Chính Sách Vận Chuyển")
+            shipping_container = st.expander(shipping_title, expanded=False)
             with shipping_container:
                 # Display as markdown with clickable links
                 st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
@@ -1050,9 +1073,8 @@ Twitter: https://twitter.com/storecutban"""
             st.markdown("---")
 
             # Legal Notice Page
-            st.markdown("### ⚖️ " + ("Legal Notice Page" if lang ==
-                                    'en' else "Trang Legal Notice"))
-            legal_container = st.container(border=True)
+            legal_title = "⚖️ " + ("Legal Notice Page Preview" if lang == 'en' else "Xem trước: Trang Legal Notice")
+            legal_container = st.expander(legal_title, expanded=False)
             with legal_container:
                 # Display as markdown with clickable links
                 st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
