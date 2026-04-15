@@ -864,6 +864,21 @@ def main():
                 if lang == 'en' else "Nhập ngách của bạn (VD: Thời Trang Nữ) để tạo nội dung chuyên sâu",
                 key="template_niche_name")
 
+        # Input section - ROW 2
+        col1, col2 = st.columns(2)
+        with col1:
+            company_address = st.text_input(
+                "🏢 " + ("Company Address (Optional)" if lang == 'en' else "Địa Chỉ Công Ty (Tùy Chọn)"),
+                placeholder="123 Main St, NY 10001" if lang == 'en' else "123 Đường Lê Lợi, Quận 1, TP.HCM",
+                key="template_company_address"
+            )
+        with col2:
+            phone_number = st.text_input(
+                "📞 " + ("Phone Number (Optional)" if lang == 'en' else "Số Điện Thoại (Tùy Chọn)"),
+                placeholder="+1 (555) 123-4567" if lang == 'en' else "0901234567",
+                key="template_phone_number"
+            )
+
         # Auto-generate social media username from store name
         social_username = ""
         if store_name.strip():
@@ -913,9 +928,10 @@ Twitter: https://twitter.com/storecutban"""
                         final_social_links = social_links.strip() if social_links.strip() else default_social
                         
                         # Generate templates
-                        st.session_state.generated_templates = PageTemplateGenerator.generate_both_templates(
+                        st.session_state.generated_templates = PageTemplateGenerator.generate_all_templates(
                             store_name.strip(), support_email.strip(),
-                            final_social_links, niche_name.strip())
+                            final_social_links, niche_name.strip(),
+                            company_address.strip(), phone_number.strip())
                 else:
                     st.warning("⚠️ " + (
                         "Please fill in both Store Name and Support Email"
@@ -942,7 +958,8 @@ Twitter: https://twitter.com/storecutban"""
                 ("🎲 **Random Templates Selected:**" if lang ==
                  'en' else "🎲 **Templates Ngẫu Nhiên Được Chọn:**") +
                 f"\n- About Us: **{templates['about_us_template']}**" +
-                f"\n- Shipping Policy: **{templates['shipping_policy_template']}**"
+                f"\n- Shipping Policy: **{templates['shipping_policy_template']}**" +
+                f"\n- Legal Notice: **{templates['legal_notice_template']}**"
             )
 
             # About Us Page
@@ -1029,6 +1046,46 @@ Twitter: https://twitter.com/storecutban"""
                         mime="text/plain",
                         use_container_width=True,
                         key="download_shipping")
+
+            st.markdown("---")
+
+            # Legal Notice Page
+            st.markdown("### ⚖️ " + ("Legal Notice Page" if lang ==
+                                    'en' else "Trang Legal Notice"))
+            legal_container = st.container(border=True)
+            with legal_container:
+                # Display as markdown with clickable links
+                st.markdown("**" + ("Preview with clickable links:" if lang == 'en' 
+                           else "Xem trước với link có thể click:") + "**")
+                
+                display_text = templates['legal_notice']
+                url_pattern = r'(https?://[^\s\)]+)'
+                display_text_md = re.sub(url_pattern, r'[\1](\1)', display_text)
+                
+                st.markdown(display_text_md)
+                
+                st.markdown("---")
+                
+                # Copy and Download buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    copy_html_btn = create_copy_html_button(
+                        templates['legal_notice'],
+                        button_text="📋 " + ("Copy HTML (with links)" if lang == 'en' else "Copy HTML (giữ link)"),
+                        button_id="copy_legal_notice"
+                    )
+                    components.html(copy_html_btn, height=60)
+                
+                with col2:
+                    st.download_button(
+                        "📥 " + ("Download Legal Notice"
+                                if lang == 'en' else "Tải Xuống Legal Notice"),
+                        data=templates['legal_notice'],
+                        file_name=
+                        f"{store_name.replace(' ', '_')}_Legal_Notice.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="download_legal_notice")
 
             # Instructions
             st.info("💡 " + (

@@ -17,6 +17,8 @@ class PageTemplateGenerator:
     _fashion_about_us_current_index = 0
     _shipping_policy_indices = None
     _shipping_policy_current_index = 0
+    _legal_notice_indices = None
+    _legal_notice_current_index = 0
 
     FASHION_ABOUT_US_TEMPLATES = [
         {
@@ -2902,6 +2904,155 @@ With appreciation,
 The {store_name} Team"""
     }]
 
+    LEGAL_NOTICE_TEMPLATES = [
+        {
+            "name": "Standard Legal Notice",
+            "content": """LEGAL NOTICE / IMPRESSUM
+================================================================================
+
+Information provided according to legal requirements.
+
+Company Information
+--------------------------------------------------------------------------------
+Store Name: {store_name}
+Address: {company_address}
+Phone: {phone_number}
+Email: {support_email}
+
+Legal Representatives
+--------------------------------------------------------------------------------
+{store_name} is represented by its management team. 
+For specific legal inquiries, please contact our support team.
+
+[Dispute Resolution|Online Dispute Resolution|EU Dispute Resolution]
+--------------------------------------------------------------------------------
+The European Commission provides a platform for online dispute resolution (OS), which you can find at https://ec.europa.eu/consumers/odr. We are [neither obliged nor willing|not obligated] to participate in a dispute settlement procedure before a consumer arbitration board.
+
+Liability for Content
+--------------------------------------------------------------------------------
+As a service provider, we are responsible for our own content on these pages according to the general laws. However, we are not obligated to monitor transmitted or stored third-party information or to investigate circumstances that indicate illegal activity.
+
+Liability for Links
+--------------------------------------------------------------------------------
+Our offer contains links to external, third-party websites, the contents of which we have no influence on. Therefore, we cannot assume any liability for these external contents. The respective provider or operator of the pages is always responsible for the content of the linked pages.
+
+Copyright
+--------------------------------------------------------------------------------
+The content and works created by the site operators on these pages are subject to copyright law. The duplication, processing, distribution, and any kind of exploitation outside the limits of copyright require the written consent of the respective author or creator.
+"""
+        },
+        {
+            "name": "Minimal Legal Information",
+            "content": """LEGAL INFORMATION
+================================================================================
+
+Business Details
+--------------------------------------------------------------------------------
+Store/Company Name: {store_name}
+Registered Address: {company_address}
+
+Contact Details
+--------------------------------------------------------------------------------
+Email Address: {support_email}
+Telephone: {phone_number}
+
+Social Media: 
+{social_links}
+
+[Disclaimer|Liability Disclosure]
+--------------------------------------------------------------------------------
+The information provided on this website is for general informational purposes only. We [strive to keep the information up to date|make every effort to provide accurate details] but make no warranties of any kind about the completeness or accuracy of the website content.
+
+Intellectual Property
+--------------------------------------------------------------------------------
+All materials within this website are the intellectual property of {store_name}. These materials may not be copied or reproduced without our written permission.
+"""
+        },
+        {
+            "name": "Corporate Impressum",
+            "content": """IMPRESSUM & LEGAL NOTICE
+================================================================================
+
+This Legal Notice is intended to provide the necessary transparency regarding the ownership and operation of {store_name}.
+
+Company Details
+--------------------------------------------------------------------------------
+Operating Entity: {store_name}
+Headquarters Address: {company_address}
+Contact Phone: {phone_number}
+Support Email: {support_email}
+
+[Copyright Notice|Intellectual Property Rights]
+--------------------------------------------------------------------------------
+Copyright © {store_name}. All rights reserved. 
+The text, images, graphics, sound files, animation files, video files and their arrangement on our Internet sites are all subject to Copyright and other intellectual property protection. 
+
+Trademarks
+--------------------------------------------------------------------------------
+Unless otherwise indicated, all marks displayed on {store_name} internet sites are subject to trademark rights, including its corporate logos and emblems.
+
+Disclaimer of Warranty
+--------------------------------------------------------------------------------
+We provide all [information and content|data and details] "as is" and without warranties of any kind, whether express or implied.
+"""
+        },
+        {
+            "name": "E-commerce Standard Legal",
+            "content": """LEGAL NOTICE
+================================================================================
+
+Welcome to the Legal Notice page of {store_name}.
+
+Contact Information
+--------------------------------------------------------------------------------
+If you have any questions, concerns, or requests regarding our store or products, feel free to reach out to us at:
+• Email: {support_email}
+• Phone: {phone_number}
+• Mail: {company_address}
+
+Follow Us:
+{social_links}
+
+Business Licensing & Registration
+--------------------------------------------------------------------------------
+{store_name} operates as an e-commerce retailer. We comply with all applicable online retail [regulations|laws] and data protection directives.
+
+Website Terms of Use
+--------------------------------------------------------------------------------
+By accessing this website, you [agree to be bound by|accept] these website Terms and Conditions of Use, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws.
+
+Content Liability
+--------------------------------------------------------------------------------
+While we [work hard to ensure|do our best to maintain] transparency and accuracy, {store_name} cannot be held liable for typographical errors or omissions relating to product descriptions, pricing, and availability.
+"""
+        },
+        {
+            "name": "Global Retail Legal Notice",
+            "content": """LEGAL INFORMATION & IMPRESSUM
+================================================================================
+
+About Us
+--------------------------------------------------------------------------------
+{store_name} is an international e-commerce platform dedicated to providing quality {niche_name} to our customers worldwide.
+
+Company Identity
+--------------------------------------------------------------------------------
+Trade Name: {store_name}
+Corporate Address: {company_address}
+Contact Email: {support_email}
+Customer Support Line: {phone_number}
+
+Regulatory Compliance
+--------------------------------------------------------------------------------
+Depending on your region, different consumer protection laws apply. We respect and [comply fully|adhere completely] with the relevant e-commerce trade laws, including transparent pricing, return rights, and data privacy regulations.
+
+Copyright and Trademarks
+--------------------------------------------------------------------------------
+All [content included on this site|website material], such as text, graphics, logos, button icons, images, and software, is the property of {store_name} or its content suppliers and protected by international copyright laws.
+"""
+        }
+    ]
+
     @classmethod
     def _get_next_about_us_index(cls):
         """Get next About Us template index using shuffle-based rotation"""
@@ -3026,19 +3177,67 @@ The {store_name} Team"""
         return {"template_name": template["name"], "content": content}
 
     @classmethod
-    def generate_both_templates(cls, store_name: str,
-                                support_email: str,
-                                social_links: str = "",
-                                niche_name: str = "") -> dict:
-        """Generate both templates with non-repeating rotation selection"""
+    def _get_next_legal_notice_index(cls):
+        """Get next Legal Notice template index using shuffle-based rotation"""
+        if cls._legal_notice_indices is None:
+            cls._legal_notice_indices = list(range(len(cls.LEGAL_NOTICE_TEMPLATES)))
+            random.shuffle(cls._legal_notice_indices)
+            cls._legal_notice_current_index = 0
+            
+        if cls._legal_notice_current_index >= len(cls._legal_notice_indices):
+            random.shuffle(cls._legal_notice_indices)
+            cls._legal_notice_current_index = 0
+            
+        index = cls._legal_notice_indices[cls._legal_notice_current_index]
+        cls._legal_notice_current_index += 1
+        return index
+
+    @classmethod
+    def get_random_legal_notice_template(cls, store_name: str,
+                                         support_email: str,
+                                         social_links: str = "",
+                                         niche_name: str = "",
+                                         company_address: str = "",
+                                         phone_number: str = "") -> dict:
+        """Get a non-repeating Legal Notice template using shuffle-based rotation"""
+        index = cls._get_next_legal_notice_index()
+        template = cls.LEGAL_NOTICE_TEMPLATES[index]
+
+        formatted_social = social_links.strip() if social_links and social_links.strip() else "[Your social media links]"
+        formatted_niche = niche_name if niche_name else "products"
+        formatted_address = company_address.strip() if company_address and company_address.strip() else "[Your Company Address]"
+        formatted_phone = phone_number.strip() if phone_number and phone_number.strip() else "[Your Phone Number]"
+
+        content = template["content"].format(store_name=store_name,
+                                             support_email=support_email,
+                                             social_links=formatted_social,
+                                             niche_name=formatted_niche,
+                                             company_address=formatted_address,
+                                             phone_number=formatted_phone)
+
+        content = cls._parse_spintax(content)
+        return {"template_name": template["name"], "content": content}
+
+    @classmethod
+    def generate_all_templates(cls, store_name: str,
+                               support_email: str,
+                               social_links: str = "",
+                               niche_name: str = "",
+                               company_address: str = "",
+                               phone_number: str = "") -> dict:
+        """Generate all policies including About Us, Shipping Policy, and Legal Notice"""
         about_us = cls.get_random_about_us_template(
             store_name, support_email, social_links, niche_name)
         shipping = cls.get_random_shipping_policy_template(
             store_name, support_email, social_links, niche_name)
+        legal = cls.get_random_legal_notice_template(
+            store_name, support_email, social_links, niche_name, company_address, phone_number)
 
         return {
             'about_us': about_us['content'],
             'about_us_template': about_us['template_name'],
             'shipping_policy': shipping['content'],
-            'shipping_policy_template': shipping['template_name']
+            'shipping_policy_template': shipping['template_name'],
+            'legal_notice': legal['content'],
+            'legal_notice_template': legal['template_name']
         }
