@@ -3205,7 +3205,14 @@ All [content included on this site|website material], such as text, graphics, lo
 
         formatted_social = social_links.strip() if social_links and social_links.strip() else "[Your social media links]"
         formatted_niche = niche_name if niche_name else "products"
-        formatted_address = company_address.strip() if company_address and company_address.strip() else "[Your Company Address]"
+        
+        if company_address and company_address.strip():
+            # Replace tabs or multiple consecutive spaces with a comma and space
+            # Example: "509 BYRUM RD\tCHAPARRAL\tNM\t88081" -> "509 BYRUM RD, CHAPARRAL, NM, 88081"
+            clean_addr = re.sub(r'\s*\t\s*|\s{2,}', ', ', company_address.strip())
+            formatted_address = clean_addr.title() if clean_addr.islower() else clean_addr
+        else:
+            formatted_address = "[Your Company Address]"
         formatted_phone = phone_number.strip() if phone_number and phone_number.strip() else "[Your Phone Number]"
 
         content = template["content"].format(store_name=store_name,
