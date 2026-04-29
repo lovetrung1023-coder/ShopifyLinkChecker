@@ -131,6 +131,130 @@ def convert_utc_to_pacific(utc_timestamp_str):
         return utc_timestamp_str
 
 
+def fetch_google_sheet_as_df(sheet_url):
+    """Fetch a public Google Sheet and return as pandas DataFrame"""
+    import io
+    import requests as req
+
+    # Extract spreadsheet ID from various URL formats
+    match = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', sheet_url)
+    if not match:
+        raise ValueError("URL không hợp lệ. Vui lòng dùng link Google Sheet đúng định dạng.")
+
+    spreadsheet_id = match.group(1)
+
+    # Extract gid (sheet tab) if present
+    gid_match = re.search(r'[#&?]gid=(\d+)', sheet_url)
+    gid = gid_match.group(1) if gid_match else '0'
+
+    # Build CSV export URL (works for public sheets)
+    csv_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+
+    response = req.get(csv_url, timeout=30)
+    if response.status_code != 200:
+        raise ValueError(
+            f"Không thể tải Sheet (HTTP {response.status_code}). "
+            "Hãy đảm bảo Sheet đã share 'Anyone with the link can view'."
+        )
+
+    # Check if response is actually CSV (not HTML login page)
+    content_type = response.headers.get('content-type', '')
+    if 'text/html' in content_type:
+        raise ValueError(
+            "Sheet chưa được share public. Vào Share > General access > 'Anyone with the link'."
+        )
+
+    df = pd.read_csv(io.StringIO(response.text))
+    return df
+
+
+def process_batch_templates(df):
+    """Process DataFrame rows and generate all templates for each store"""
+    # Flexible column mapping (supports English and Vietnamese names)
+    col_map = {}
+    for col in df.columns:
+        cl = col.strip().lower()
+        if cl in ['store_name', 'store name', 'tên store', 'ten store', 'name', 'store']:
+            col_map['store_name'] = col
+        elif cl in ['support_email', 'email', 'email hỗ trợ', 'email ho tro', 'mail']:
+            col_map['support_email'] = col
+        elif cl in ['niche', 'niche_name', 'ngách', 'ngach', 'niche/industry', 'industry']:
+            col_map['niche'] = col
+        elif cl in ['address', 'company_address', 'địa chỉ', 'dia chi', 'company address']:
+            col_map['address'] = col
+        elif cl in ['phone', 'phone_number', 'số điện thoại', 'sdt', 'điện thoại', 'phone number']:
+            col_map['phone'] = col
+        elif cl in ['social_links', 'social links', 'social', 'mạng xã hội']:
+            col_map['social'] = col
+
+    if 'store_name' not in col_map:
+        raise ValueError(f"Không tìm thấy cột 'store_name'. Các cột hiện có: {list(df.columns)}")
+    if 'support_email' not in col_map:
+        raise ValueError(f"Không tìm thấy cột 'support_email' hoặc 'email'. Các cột hiện có: {list(df.columns)}")
+
+    results = []
+    for idx, row in df.iterrows():
+        store_name = str(row[col_map['store_name']]).strip()
+        support_email = str(row[col_map['support_email']]).strip()
+
+        # Skip empty/invalid rows
+        if not store_name or store_name in ['nan', ''] or not support_email or support_email in ['nan', '']:
+            continue
+
+        # Get optional fields
+        niche = "Women's Clothing"
+        if 'niche' in col_map:
+            val = str(row.get(col_map['niche'], '')).strip()
+            if val and val != 'nan':
+                niche = val
+
+        address = ""
+        if 'address' in col_map:
+            val = str(row.get(col_map['address'], '')).strip()
+            if val and val != 'nan':
+                address = val
+
+        phone = ""
+        if 'phone' in col_map:
+            val = str(row.get(col_map['phone'], '')).strip()
+            if val and val != 'nan':
+                phone = val
+
+        # Social links: use column if exists, otherwise auto-generate
+        if 'social' in col_map:
+            social = str(row.get(col_map['social'], '')).strip()
+            if not social or social == 'nan':
+                social = ""
+        else:
+            social = ""
+
+        if not social:
+            username = store_name.lower().replace(" ", "").replace("-", "").replace("_", "")
+            username = ''.join(c for c in username if c.isalnum())
+            social = f"Facebook: https://facebook.com/{username}\nInstagram: https://instagram.com/{username}\nTwitter: https://twitter.com/{username}"
+
+        templates = PageTemplateGenerator.generate_all_templates(
+            store_name, support_email, social, niche, address, phone
+        )
+
+        results.append({
+            'row_num': idx + 2,
+            'store_name': store_name,
+            'support_email': support_email,
+            'about_us': templates['about_us'],
+            'about_us_html': text_to_html(templates['about_us']),
+            'about_us_template': templates['about_us_template'],
+            'shipping_policy': templates['shipping_policy'],
+            'shipping_policy_html': text_to_html(templates['shipping_policy']),
+            'shipping_policy_template': templates['shipping_policy_template'],
+            'legal_notice': templates['legal_notice'],
+            'legal_notice_html': text_to_html(templates['legal_notice']),
+            'legal_notice_template': templates['legal_notice_template'],
+        })
+
+    return results
+
+
 def scheduled_check_callback():
     """Callback function for scheduled checks - runs in separate thread"""
     try:
@@ -217,6 +341,12 @@ if 'language' not in st.session_state:
     st.session_state.language = 'vi'
 if 'generated_templates' not in st.session_state:
     st.session_state.generated_templates = None
+if 'batch_sheet_data' not in st.session_state:
+    st.session_state.batch_sheet_data = None
+if 'batch_results' not in st.session_state:
+    st.session_state.batch_results = None
+if 'batch_current_index' not in st.session_state:
+    st.session_state.batch_current_index = 0
 
 
 @st.cache_data(ttl=10, show_spinner=False)
@@ -1115,6 +1245,299 @@ Twitter: https://twitter.com/storecutban"""
                 if lang == 'en' else
                 "Mẹo: Copy nội dung bên trên và dán vào trang Shopify (Online Store > Pages > Add page)"
             ))
+
+    # ==========================================
+    # BATCH TEMPLATE GENERATOR
+    # ==========================================
+    st.markdown("---")
+    with st.expander("📋 " + ("Batch Template Generator - Process Multiple Stores"
+                             if lang == 'en' else "Tạo Hàng Loạt - Batch Mode"),
+                     expanded=False):
+        if lang == 'en':
+            st.markdown("""
+            Generate **About Us**, **Shipping Policy**, and **Legal Notice** for **multiple stores at once**.
+            Connect a Google Sheet or upload CSV/Excel file with your store data.
+            """)
+        else:
+            st.markdown("""
+            Tạo **About Us**, **Shipping Policy**, và **Legal Notice** cho **nhiều store cùng lúc**.
+            Kết nối Google Sheet hoặc upload file CSV/Excel chứa dữ liệu store.
+            """)
+
+        # Required columns info
+        with st.expander("📖 " + ("Column Format Guide" if lang == 'en' else "Hướng Dẫn Format Cột"), expanded=False):
+            st.markdown("""
+| Cột (Bắt buộc) | Tên chấp nhận | Ví dụ |
+|---|---|---|
+| **Store Name** ✅ | `store_name`, `name`, `store` | My Fashion Store |
+| **Email** ✅ | `email`, `support_email`, `mail` | support@store.com |
+
+| Cột (Tùy chọn) | Tên chấp nhận | Ví dụ |
+|---|---|---|
+| Niche | `niche`, `industry` | Women's Clothing |
+| Address | `address`, `company_address` | 123 Main St, NY |
+| Phone | `phone`, `phone_number`, `sdt` | +1-555-0001 |
+| Social | `social_links`, `social` | facebook.com/store |
+            """)
+
+        # Input tabs
+        batch_tab1, batch_tab2 = st.tabs([
+            "🔗 Google Sheet",
+            "📁 Upload CSV/Excel"
+        ])
+
+        with batch_tab1:
+            sheet_url = st.text_input(
+                "📊 " + ("Google Sheet URL" if lang == 'en' else "Link Google Sheet"),
+                placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit",
+                help=("Sheet must be shared as 'Anyone with link can view'. No API key needed!"
+                      if lang == 'en' else
+                      "Sheet phải share 'Bất kỳ ai có link đều xem được'. Không cần API key!"),
+                key="batch_sheet_url"
+            )
+
+            if st.button("📥 " + ("Load Sheet Data" if lang == 'en' else "Tải Dữ Liệu Sheet"),
+                         key="load_sheet_btn"):
+                if sheet_url.strip():
+                    try:
+                        with st.spinner("Đang tải dữ liệu từ Google Sheet..." if lang == 'vi'
+                                       else "Loading data from Google Sheet..."):
+                            df = fetch_google_sheet_as_df(sheet_url.strip())
+                            st.session_state.batch_sheet_data = df
+                            st.session_state.batch_results = None
+                            st.session_state.batch_current_index = 0
+                        st.success(f"✅ " + (f"Đã tải {len(df)} hàng dữ liệu!" if lang == 'vi'
+                                            else f"Loaded {len(df)} rows!"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Lỗi: {str(e)}" if lang == 'vi' else f"❌ Error: {str(e)}")
+                else:
+                    st.warning("⚠️ " + ("Vui lòng nhập URL Google Sheet" if lang == 'vi'
+                                        else "Please enter a Google Sheet URL"))
+
+        with batch_tab2:
+            uploaded_batch_file = st.file_uploader(
+                "📁 " + ("Upload CSV or Excel file" if lang == 'en' else "Upload file CSV hoặc Excel"),
+                type=["csv", "xlsx", "xls"],
+                key="batch_file_upload"
+            )
+
+            if uploaded_batch_file is not None:
+                try:
+                    if uploaded_batch_file.name.endswith('.csv'):
+                        df = pd.read_csv(uploaded_batch_file)
+                    else:
+                        df = pd.read_excel(uploaded_batch_file)
+                    st.session_state.batch_sheet_data = df
+                    st.session_state.batch_results = None
+                    st.session_state.batch_current_index = 0
+                    st.success(f"✅ " + (f"Đã tải {len(df)} hàng dữ liệu!" if lang == 'vi'
+                                        else f"Loaded {len(df)} rows!"))
+                except Exception as e:
+                    st.error(f"❌ Lỗi đọc file: {str(e)}" if lang == 'vi'
+                             else f"❌ Error reading file: {str(e)}")
+
+        # ---- DATA PREVIEW & GENERATE ----
+        if st.session_state.batch_sheet_data is not None:
+            df = st.session_state.batch_sheet_data
+
+            st.markdown("### 📊 " + ("Data Preview" if lang == 'en' else "Xem Trước Dữ Liệu"))
+            st.dataframe(df.head(10), use_container_width=True, hide_index=True)
+            if len(df) > 10:
+                st.caption(f"{'Hiển thị' if lang == 'vi' else 'Showing'} 10/{len(df)} "
+                          f"{'hàng' if lang == 'vi' else 'rows'}")
+
+            st.markdown(f"**{'Các cột phát hiện' if lang == 'vi' else 'Detected columns'}:** "
+                       f"`{'`, `'.join(df.columns)}`")
+
+            col_btn1, col_btn2 = st.columns([3, 1])
+            with col_btn1:
+                if st.button(
+                    "🚀 " + (f"Tạo Tài Liệu Cho {len(df)} Store" if lang == 'vi'
+                             else f"Generate Templates For {len(df)} Stores"),
+                    type="primary", use_container_width=True, key="generate_batch_btn"
+                ):
+                    try:
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        status_text.text(f"{'Đang xử lý...' if lang == 'vi' else 'Processing...'}")
+
+                        results = process_batch_templates(df)
+
+                        progress_bar.progress(100)
+                        status_text.empty()
+                        progress_bar.empty()
+
+                        st.session_state.batch_results = results
+                        st.session_state.batch_current_index = 0
+                        st.success(
+                            f"✅ " + (f"Đã tạo {len(results)} bộ tài liệu thành công!"
+                                     if lang == 'vi'
+                                     else f"Successfully generated {len(results)} template sets!"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Lỗi: {str(e)}" if lang == 'vi' else f"❌ Error: {str(e)}")
+
+            with col_btn2:
+                if st.button("🗑️ " + ("Xóa Dữ Liệu" if lang == 'vi' else "Clear Data"),
+                             use_container_width=True, key="clear_batch_data"):
+                    st.session_state.batch_sheet_data = None
+                    st.session_state.batch_results = None
+                    st.session_state.batch_current_index = 0
+                    st.rerun()
+
+        # ---- BATCH RESULTS ----
+        if st.session_state.batch_results:
+            results = st.session_state.batch_results
+            total = len(results)
+            current_idx = st.session_state.batch_current_index
+
+            # Clamp index
+            if current_idx >= total:
+                current_idx = total - 1
+                st.session_state.batch_current_index = current_idx
+
+            st.markdown("---")
+            st.markdown("### 📋 " + (f"Kết Quả ({total} store)" if lang == 'vi'
+                                     else f"Results ({total} stores)"))
+
+            # Summary table
+            with st.expander("📊 " + ("Tổng quan tất cả store" if lang == 'vi'
+                                       else "All Stores Overview"), expanded=False):
+                summary_data = []
+                for i, r in enumerate(results):
+                    summary_data.append({
+                        '#': i + 1,
+                        'Store': r['store_name'],
+                        'Email': r['support_email'],
+                        'About Us': r['about_us_template'],
+                        'Shipping': r['shipping_policy_template'],
+                        'Legal': r['legal_notice_template'],
+                    })
+                st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+
+            # Navigation
+            st.markdown("#### 🧭 " + ("Điều hướng" if lang == 'vi' else "Navigation"))
+            nav_c1, nav_c2, nav_c3, nav_c4, nav_c5 = st.columns([1, 1, 2, 1, 1])
+
+            with nav_c1:
+                if st.button("⏮️", key="batch_first", help="First",
+                             use_container_width=True):
+                    st.session_state.batch_current_index = 0
+                    st.rerun()
+            with nav_c2:
+                if st.button("◀️", key="batch_prev", help="Previous",
+                             use_container_width=True):
+                    if current_idx > 0:
+                        st.session_state.batch_current_index = current_idx - 1
+                        st.rerun()
+            with nav_c3:
+                new_idx = st.number_input(
+                    f"Store (1-{total})",
+                    min_value=1, max_value=total,
+                    value=current_idx + 1,
+                    key="batch_nav_input"
+                )
+                if new_idx - 1 != current_idx:
+                    st.session_state.batch_current_index = new_idx - 1
+                    st.rerun()
+            with nav_c4:
+                if st.button("▶️", key="batch_next", help="Next",
+                             use_container_width=True):
+                    if current_idx < total - 1:
+                        st.session_state.batch_current_index = current_idx + 1
+                        st.rerun()
+            with nav_c5:
+                if st.button("⏭️", key="batch_last", help="Last",
+                             use_container_width=True):
+                    st.session_state.batch_current_index = total - 1
+                    st.rerun()
+
+            # Progress bar
+            st.progress((current_idx + 1) / total,
+                       text=f"Store {current_idx + 1}/{total}")
+
+            # Current store display
+            current = results[current_idx]
+
+            st.markdown(f"### 🏪 #{current_idx + 1}: **{current['store_name']}**")
+            st.caption(f"📧 {current['support_email']} | "
+                      f"Templates: {current['about_us_template']}, "
+                      f"{current['shipping_policy_template']}, "
+                      f"{current['legal_notice_template']}")
+
+            # Quick Copy Buttons
+            st.markdown("#### ⚡ " + ("Copy Nhanh HTML" if lang == 'vi' else "Quick Copy HTML"))
+            bcq1, bcq2, bcq3 = st.columns(3)
+            with bcq1:
+                btn_html = create_copy_html_button(
+                    current['about_us'],
+                    button_text="📋 Copy About Us",
+                    button_id=f"batch_about_{current_idx}"
+                )
+                components.html(btn_html, height=60)
+            with bcq2:
+                btn_html = create_copy_html_button(
+                    current['shipping_policy'],
+                    button_text="📋 Copy Shipping",
+                    button_id=f"batch_shipping_{current_idx}"
+                )
+                components.html(btn_html, height=60)
+            with bcq3:
+                btn_html = create_copy_html_button(
+                    current['legal_notice'],
+                    button_text="📋 Copy Legal",
+                    button_id=f"batch_legal_{current_idx}"
+                )
+                components.html(btn_html, height=60)
+
+            # Preview sections
+            with st.expander("👁️ Preview About Us", expanded=False):
+                display_text = current['about_us']
+                url_pat = r'(https?://[^\s\)]+)'
+                st.markdown(re.sub(url_pat, r'[\1](\1)', display_text))
+
+            with st.expander("👁️ Preview Shipping Policy", expanded=False):
+                display_text = current['shipping_policy']
+                st.markdown(re.sub(url_pat, r'[\1](\1)', display_text))
+
+            with st.expander("👁️ Preview Legal Notice", expanded=False):
+                display_text = current['legal_notice']
+                st.markdown(re.sub(url_pat, r'[\1](\1)', display_text))
+
+            # Export All Results
+            st.markdown("---")
+            st.markdown("#### 📥 " + ("Xuất Toàn Bộ Kết Quả" if lang == 'vi'
+                                       else "Export All Results"))
+
+            export_rows = []
+            for r in results:
+                export_rows.append({
+                    'store_name': r['store_name'],
+                    'email': r['support_email'],
+                    'about_us_html': r['about_us_html'],
+                    'shipping_policy_html': r['shipping_policy_html'],
+                    'legal_notice_html': r['legal_notice_html'],
+                })
+
+            export_df = pd.DataFrame(export_rows)
+            csv_export = export_df.to_csv(index=False)
+
+            st.download_button(
+                "📥 " + (f"Tải CSV ({total} store)" if lang == 'vi'
+                         else f"Download CSV ({total} stores)"),
+                data=csv_export,
+                file_name="batch_templates_results.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="export_batch_csv"
+            )
+            st.caption(
+                "💡 " + ("File CSV chứa HTML cho cả 3 loại tài liệu. "
+                         "Có thể paste ngược lại vào Google Sheet."
+                         if lang == 'vi' else
+                         "CSV file contains HTML for all 3 document types. "
+                         "Can be pasted back into Google Sheet."))
 
 
 def check_all_stores():
