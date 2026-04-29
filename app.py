@@ -1149,7 +1149,6 @@ Twitter: https://twitter.com/storecutban"""
                            else "Xem trước với link có thể click:") + "**")
                 
                 # Convert URLs to markdown links for display
-                import re
                 display_text = templates['about_us']
                 # Find URLs and make them clickable
                 url_pattern = r'(https?://[^\s\)]+)'
@@ -1191,7 +1190,6 @@ Twitter: https://twitter.com/storecutban"""
                            else "Xem trước với link có thể click:") + "**")
                 
                 # Convert URLs to markdown links for display
-                import re
                 display_text = templates['shipping_policy']
                 # Find URLs and make them clickable
                 url_pattern = r'(https?://[^\s\)]+)'
