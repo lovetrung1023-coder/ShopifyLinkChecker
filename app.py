@@ -147,25 +147,48 @@ def fetch_google_sheet_as_df(sheet_url):
     gid_match = re.search(r'[#&?]gid=(\d+)', sheet_url)
     gid = gid_match.group(1) if gid_match else '0'
 
-    # Build CSV export URL (works for public sheets)
-    csv_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+    # Headers to mimic browser request
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
 
-    response = req.get(csv_url, timeout=30)
-    if response.status_code != 200:
-        raise ValueError(
-            f"Không thể tải Sheet (HTTP {response.status_code}). "
-            "Hãy đảm bảo Sheet đã share 'Anyone with the link can view'."
-        )
+    # Try multiple endpoints (some work better depending on share settings)
+    endpoints = [
+        # Method 1: gviz endpoint (most reliable for "Anyone with link" shares)
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq?tqx=out:csv&gid={gid}",
+        # Method 2: standard export
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}",
+        # Method 3: pub endpoint (requires "Publish to web")
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/pub?gid={gid}&single=true&output=csv",
+    ]
 
-    # Check if response is actually CSV (not HTML login page)
-    content_type = response.headers.get('content-type', '')
-    if 'text/html' in content_type:
-        raise ValueError(
-            "Sheet chưa được share public. Vào Share > General access > 'Anyone with the link'."
-        )
+    last_error = None
+    for csv_url in endpoints:
+        try:
+            response = req.get(csv_url, timeout=30, headers=headers)
+            if response.status_code == 200:
+                content_type = response.headers.get('content-type', '')
+                # Check it's not an HTML login/error page
+                if 'text/html' in content_type and '<html' in response.text[:500].lower():
+                    last_error = "Sheet chưa được share public."
+                    continue
+                df = pd.read_csv(io.StringIO(response.text))
+                if len(df) > 0 and len(df.columns) > 0:
+                    return df
+                last_error = "Sheet rỗng hoặc không có dữ liệu."
+            else:
+                last_error = f"HTTP {response.status_code}"
+        except Exception as e:
+            last_error = str(e)
+            continue
 
-    df = pd.read_csv(io.StringIO(response.text))
-    return df
+    raise ValueError(
+        f"Không thể tải Sheet sau khi thử nhiều phương pháp. Lỗi cuối: {last_error}. "
+        "Hãy đảm bảo:\n"
+        "1. Sheet đã share 'Anyone with the link can view'\n"
+        "2. URL đúng định dạng: https://docs.google.com/spreadsheets/d/SHEET_ID/edit"
+    )
+
 
 
 def process_batch_templates(df):
